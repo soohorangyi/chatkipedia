@@ -4,9 +4,8 @@
 // https://github.com/your-username/chatpedia
 // ============================================================
 
-import { extension_settings, saveSettingsDebounced } from '../../../extensions.js';
-import { characters, this_chid, getCharacters } from '../../../../script.js';
-import { persona_all_characters, user_avatar_block } from '../../../../personas.js';
+import { saveSettingsDebounced, characters, this_chid } from '../../../../script.js';
+import { extension_settings } from '../../../extensions.js';
 
 const EXT_NAME = 'chatpedia';
 
@@ -646,12 +645,15 @@ function getSTCharacters() {
 /** ST 페르소나 목록 반환 */
 function getSTPers() {
     try {
-        if (typeof persona_all_characters !== 'undefined') {
-            return Object.entries(persona_all_characters).map(([k, v]) => ({
-                id: k, name: v.name || k
+        // 방법 1: getContext() via SillyTavern global
+        const ctx = window.SillyTavern?.getContext();
+        if (ctx?.personas && typeof ctx.personas === 'object') {
+            return Object.entries(ctx.personas).map(([k, v]) => ({
+                id: k, name: typeof v === 'string' ? v : (v?.name || k)
             }));
         }
     } catch {}
+    // 방법 2: DOM fallback
     const list = [];
     $('#persona_selector option, #user_avatar_block .avatar-item').each(function() {
         const name = $(this).text().trim() || $(this).attr('title');
