@@ -586,27 +586,3 @@
 #chatpedia-modal .cp-btn-move:hover {
     background: rgba(107,147,184,.1); border-color: var(--cp-gold); color: var(--cp-gold);
 }
-
-/* JSON 붙여넣기 다이얼로그 */
-.cp-paste-box {
-    width: 480px !important;
-    max-width: 95vw !important;
-    padding: 24px !important;
-}
-.cp-paste-textarea {
-    width: 100%;
-    height: 180px;
-    background: #F9FCFE;
-    border: 1px solid #C5DCE8;
-    border-radius: 8px;
-    padding: 10px 12px;
-    font-family: 'Pretendard', monospace, sans-serif;
-    font-size: 12px;
-    color: #2B3A4A;
-    resize: vertical;
-    outline: none;
-    box-sizing: border-box;
-    line-height: 1.5;
-    margin-top: 4px;
-}
-.cp-paste-textarea:focus { border-color: #6B93B8; }
