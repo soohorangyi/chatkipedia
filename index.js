@@ -60,6 +60,13 @@ function saveEntries(e)   { getSettings().entries = e; saveSettingsDebounced(); 
 function getCustomFields(){ return getSettings().customFields || []; }
 function saveCustomFields(f){ getSettings().customFields = f; saveSettingsDebounced(); }
 function getAllFields()    { return [...BASE_FIELDS, ...getCustomFields()]; }
+// 특정 entry용 필드 목록 (로어북 항목은 _localFields 우선)
+function getFieldsForEntry(entry) {
+    if (entry && Array.isArray(entry._localFields) && entry._localFields.length > 0) {
+        return [...BASE_FIELDS, ...entry._localFields];
+    }
+    return getAllFields();
+}
 function getOpt(key)      { return getSettings()[key]; }
 function setOpt(key, val) { getSettings()[key] = val; saveSettingsDebounced(); }
 
@@ -80,7 +87,8 @@ function getFilteredEntries() {
     if (state.searchQuery.trim()) {
         const q = state.searchQuery.trim().toLowerCase();
         entries = entries.filter(e => {
-            const vals = getAllFields().map(f => (e[f.key] || '').toLowerCase());
+            const fields = getFieldsForEntry(e);
+            const vals = fields.map(f => (e[f.key] || '').toLowerCase());
             const tags = (e.tags || []).map(t => t.toLowerCase());
             return [...vals, ...tags].some(v => v.includes(q));
         });
@@ -184,8 +192,9 @@ function renderDetail() {
 function renderViewMode(panel, entry) {
     const typeLabel = entry.type === 'character' ? '캐릭터' : '페르소나';
     const baseKeys = new Set(BASE_FIELDS.map(f => f.key));
+    const entryFields = getFieldsForEntry(entry);
 
-    const fieldBlocks = getAllFields().filter(f => f.key !== 'name').map(f => {
+    const fieldBlocks = entryFields.filter(f => f.key !== 'name').map(f => {
         const val = entry[f.key];
         const empty = !val || !String(val).trim();
         if (empty && getOpt('hideEmptyFields')) return '';
@@ -229,7 +238,10 @@ function renderViewMode(panel, entry) {
     panel.querySelector('#cp-btn-edit').addEventListener('click', () => {
         state.mode = 'edit';
         state.editTags = [...(entry.tags || [])];
-        state.editCustomFields = structuredClone(getCustomFields());
+        // 로어북 항목은 자체 필드(_localFields) 사용, 없으면 전역 커스텀 필드
+        state.editCustomFields = Array.isArray(entry._localFields) && entry._localFields.length > 0
+            ? structuredClone(entry._localFields)
+            : structuredClone(getCustomFields());
         state.showAddField = false;
         renderDetail();
     });
@@ -387,6 +399,15 @@ function renderEditForm(panel) {
             const el = form.querySelector(`[name="custom_${f.key}"]`);
             if (el) data[f.key] = el.value.trim();
         });
+        // 로어북 항목이면 _localFields 유지
+        if (isNew) {
+            // 신규는 전역 커스텀 필드 사용
+        } else {
+            const existingEntry = getEntries().find(e => e.id === state.selectedId);
+            if (existingEntry && Array.isArray(existingEntry._localFields)) {
+                data._localFields = existingEntry._localFields;
+            }
+        }
         if (!data.name) { showToast('이름을 입력해 주세요!'); form.querySelector('[name="name"]')?.focus(); return; }
         data.tags = [...(state.editTags || [])];
         data.type = state.activeTab;
@@ -864,15 +885,9 @@ function bindSettingsPanelEvents(panel) {
 
                     // 탭 선택 팝업 → 선택 후 저장
                     const saveLorebook = (targetType) => {
-                        const entry = { ...lbEntry, type: targetType };
-
-                        // 커스텀 필드 전역 등록 (중복 key 방지)
-                        const existingCF = getCustomFields();
-                        const existingKeys = new Set(existingCF.map(f => f.key));
-                        const newCF = customFieldsFromLorebook
-                            .map(({ _fromLorebook, ...f }) => f)
-                            .filter(f => !existingKeys.has(f.key));
-                        saveCustomFields([...existingCF, ...newCF]);
+                        // 전역 커스텀 필드 등록 안 함 — _localFields로 항목 자체에 내장
+                        const localFields = customFieldsFromLorebook.map(({ _fromLorebook, ...f }) => f);
+                        const entry = { ...lbEntry, type: targetType, _localFields: localFields };
 
                         const existMap = Object.fromEntries(getEntries().map(e => [e.id, e]));
                         existMap[entry.id] = entry;
