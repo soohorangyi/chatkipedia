@@ -3,7 +3,7 @@
    ⚠️ ST 전역 CSS 오염 방지:
       - :root 사용 금지
       - 모든 변수/스타일은 #chatpedia-overlay,
-        #chatpedia_ext_container, #chatpedia-trigger 스코프 안
+        #chatpedia_ext_container 스코프 안
    레퍼런스: vocab-helper style.css 패턴 준수
 ===================================================== */
 
@@ -398,19 +398,7 @@
     #chatpedia-modal .cp-view-actions { width: 100%; justify-content: flex-end; }
 }
 
-/* =====================================================
-   플로팅 버튼 — 명시적 색상값 사용 (변수 미참조)
-===================================================== */
-#chatpedia-trigger {
-    position: fixed; bottom: 76px; right: 14px; z-index: 9999;
-    width: 40px; height: 40px;
-    background: linear-gradient(135deg, #1e2a35, #2d3e52);
-    border: 1px solid #6B93B8; border-radius: 50%;
-    font-size: 18px; cursor: pointer;
-    display: flex; align-items: center; justify-content: center;
-    box-shadow: 0 4px 16px rgba(0,0,0,.5); transition: all .2s;
-}
-#chatpedia-trigger:hover { border-color: #9DC4D8; box-shadow: 0 4px 20px rgba(107,147,184,.3); transform: translateY(-2px); }
+
 
 /* =====================================================
    확인 다이얼로그 — 명시적 색상값 사용
@@ -518,21 +506,8 @@
 
 #chatpedia_ext_container .cp-set-danger-row { padding-top: 8px; border-top: 1px solid rgba(184,92,92,.2); }
 
-#chatpedia_ext_container .cp-set-profile-wrap { display: flex; gap: 7px; align-items: center; }
-#chatpedia_ext_container .cp-set-profile-wrap .cp-set-select { flex: 1; }
-#chatpedia_ext_container .cp-set-btn-apply {
-    padding: 6px 12px;
-    background: linear-gradient(135deg, #6B93B8, #9DC4D8);
-    border: none; border-radius: 5px;
-    font-family: 'Pretendard', -apple-system, sans-serif;
-    font-size: 12px; font-weight: 700; color: #1e2a35;
-    cursor: pointer; white-space: nowrap; transition: all .15s; flex-shrink: 0;
-}
 #chatpedia_ext_container .cp-set-btn-apply:hover { filter: brightness(1.1); }
 
-#chatpedia_ext_container .cp-set-link-list { display: flex; flex-direction: column; gap: 7px; }
-#chatpedia_ext_container .cp-set-link-row { display: grid; grid-template-columns: 1fr 1.4fr; gap: 8px; align-items: center; }
-#chatpedia_ext_container .cp-set-link-name { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* 토글 스위치 */
 #chatpedia_ext_container .cp-toggle {
@@ -559,10 +534,6 @@
     left: 18px; background: #9DC4D8;
 }
 
-#chatpedia_ext_container .cp-set-import-wrap { display: flex; gap: 7px; align-items: center; }
 
 @media (max-width: 480px) {
-    #chatpedia_ext_container .cp-set-link-row { grid-template-columns: 1fr; }
-    #chatpedia_ext_container .cp-set-profile-wrap { flex-direction: column; align-items: stretch; }
-    #chatpedia-trigger { bottom: 70px; right: 10px; width: 36px; height: 36px; font-size: 16px; }
 }
