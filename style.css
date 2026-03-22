@@ -404,26 +404,52 @@
    확인 다이얼로그 — 명시적 색상값 사용
 ===================================================== */
 .cp-confirm-overlay {
-    position: fixed; inset: 0;
-    background: rgba(0,0,0,.55); z-index: 10100;
-    display: flex; align-items: center; justify-content: center;
+    position: fixed;
+    top: 0; left: 0;
+    width: 100vw; height: 100vh;
+    background: rgba(43, 58, 74, 0.55);
+    backdrop-filter: blur(2px);
+    z-index: 99999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0; padding: 0; box-sizing: border-box;
 }
 .cp-confirm-box {
-    background: #EEE4D4; border: 1px solid #3d5470;
-    border-radius: 8px; padding: 22px; max-width: 300px;
-    text-align: center; box-shadow: 0 8px 32px rgba(0,0,0,.6);
+    background: #FFFFFF;
+    border: 1px solid #C5DCE8;
+    border-radius: 12px;
+    padding: 28px 28px 22px;
+    width: 300px;
+    max-width: 90vw;
+    text-align: center;
+    box-shadow: 0 16px 48px rgba(107,147,184,.25);
     font-family: 'Pretendard', -apple-system, sans-serif;
 }
-.cp-confirm-box p { color: #F0E0CC; font-size: 13px; margin: 0 0 16px; line-height: 1.6; }
-.cp-confirm-btns { display: flex; gap: 9px; justify-content: center; }
-.cp-confirm-yes { padding: 6px 16px; background: #c47070; border: none; border-radius: 6px; color: #fff; font-family: 'Pretendard', -apple-system, sans-serif; font-size: 12px; font-weight: 700; cursor: pointer; }
-.cp-confirm-yes:hover { filter: brightness(1.15); }
-.cp-confirm-no  { padding: 6px 16px; background: #FDFAF6; border: 1px solid #3d5470; border-radius: 6px; color: #B8AD96; font-family: 'Pretendard', -apple-system, sans-serif; font-size: 12px; cursor: pointer; }
-.cp-confirm-no:hover { color: #F0E0CC; }
+.cp-confirm-icon { font-size: 28px; margin-bottom: 10px; line-height: 1; }
+.cp-confirm-msg {
+    color: #2B3A4A;
+    font-size: 14px;
+    font-weight: 500;
+    margin: 0 0 20px;
+    line-height: 1.65;
+}
+.cp-confirm-btns { display: flex; gap: 10px; justify-content: center; }
+.cp-confirm-yes {
+    padding: 8px 22px;
+    background: #C0675A; border: none; border-radius: 8px;
+    color: #fff; font-family: 'Pretendard', -apple-system, sans-serif;
+    font-size: 13px; font-weight: 700; cursor: pointer; transition: all .15s;
+}
+.cp-confirm-yes:hover { background: #a8564a; }
+.cp-confirm-no {
+    padding: 8px 22px;
+    background: #EBF4F9; border: 1px solid #C5DCE8; border-radius: 8px;
+    color: #2B3A4A; font-family: 'Pretendard', -apple-system, sans-serif;
+    font-size: 13px; cursor: pointer; transition: all .15s;
+}
+.cp-confirm-no:hover { background: #D8EDF5; }
 
-/* =====================================================
-   토스트 — 명시적 색상값 사용
-===================================================== */
 .cp-toast {
     position: fixed; bottom: 20px; left: 50%;
     transform: translateX(-50%) translateY(16px);
