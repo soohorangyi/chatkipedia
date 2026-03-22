@@ -4,7 +4,7 @@
 // https://github.com/your-username/chatpedia
 // ============================================================
 
-import { saveSettingsDebounced, characters, this_chid } from '../../../../script.js';
+import { saveSettingsDebounced } from '../../../../script.js';
 import { extension_settings } from '../../../extensions.js';
 
 const EXT_NAME = 'chatpedia';
@@ -29,9 +29,6 @@ const DEFAULT_SETTINGS = {
     customFields: [],
     hideEmptyFields: false,
     defaultTab: 'character',
-    showFloatBtn: true,
-    charLinks: {},
-    personaLinks: {},
 };
 
 // ── 상태 ──────────────────────────────────────────────────
@@ -53,11 +50,8 @@ function getSettings() {
     }
     const s = extension_settings[EXT_NAME];
     if (!s.customFields)  s.customFields = [];
-    if (!s.charLinks)     s.charLinks = {};
-    if (!s.personaLinks)  s.personaLinks = {};
     if (s.hideEmptyFields === undefined) s.hideEmptyFields = false;
     if (s.defaultTab      === undefined) s.defaultTab = 'character';
-    if (s.showFloatBtn    === undefined) s.showFloatBtn = true;
     return s;
 }
 
@@ -598,8 +592,6 @@ function openModal()  {
         }
         o.classList.add('active');
         renderAll();
-        // 현재 ST 캐릭터와 연결된 항목 하이라이트
-        highlightLinkedEntry();
     }
 }
 function closeModal() { document.getElementById('chatpedia-overlay')?.classList.remove('active'); }
@@ -673,122 +665,27 @@ function registerWandButton() {
     $('#extensionsMenu').append($btn);
 }
 
-// ── 플로팅 버튼 (모바일 보조) ─────────────────────────────
-function buildTriggerButton() {
-    if (document.getElementById('chatpedia-trigger')) return;
-    const btn = document.createElement('button');
-    btn.id = 'chatpedia-trigger';
-    btn.title = '챗키피디아 열기';
-    btn.innerHTML = `📚`;
-    btn.addEventListener('click', openModal);
-    document.body.appendChild(btn);
-}
-
-function syncFloatBtn() {
-    const btn = document.getElementById('chatpedia-trigger');
-    if (btn) btn.style.display = getOpt('showFloatBtn') ? 'flex' : 'none';
-}
 
 
-// ============================================================
-// ST 연동 유틸
-// ============================================================
-
-/** ST 연결 프로필 목록 반환 */
-function getConnectionProfiles() {
-    // 레퍼런스(vocab-helper)와 동일한 방식: #connection_profiles option
-    const profiles = [];
-    $('#connection_profiles option').each(function() {
-        const val  = $(this).val();
-        const text = $(this).text().trim();
-        // <None> 항목도 포함 (val이 빈 문자열이거나 'none')
-        profiles.push({ id: val, name: text });
-    });
-    return profiles;
-}
-
-/** ST 캐릭터 목록 반환 */
-function getSTCharacters() {
-    try {
-        if (Array.isArray(characters) && characters.length) {
-            return characters.map((c, i) => ({ id: String(i), name: c.name || `캐릭터 ${i}` }));
-        }
-    } catch {}
-    // fallback: DOM에서 수집
-    const list = [];
-    $('#rm_print_characters_block .character_select, .character_list .char-item').each(function() {
-        const name = $(this).find('.ch_name, .name').first().text().trim()
-            || $(this).attr('title') || $(this).data('name');
-        const id   = $(this).attr('chid') || $(this).data('chid') || name;
-        if (name) list.push({ id: String(id), name });
-    });
-    return list;
-}
-
-/** ST 페르소나 목록 반환 */
-function getSTPers() {
-    try {
-        // 방법 1: getContext() via SillyTavern global
-        const ctx = window.SillyTavern?.getContext();
-        if (ctx?.personas && typeof ctx.personas === 'object') {
-            return Object.entries(ctx.personas).map(([k, v]) => ({
-                id: k, name: typeof v === 'string' ? v : (v?.name || k)
-            }));
-        }
-    } catch {}
-    // 방법 2: DOM fallback
-    const list = [];
-    $('#persona_selector option, #user_avatar_block .avatar-item').each(function() {
-        const name = $(this).text().trim() || $(this).attr('title');
-        const id   = $(this).val() || $(this).data('name') || name;
-        if (name && name !== '없음') list.push({ id, name });
-    });
-    return list;
-}
-
-/** 현재 열린 ST 캐릭터와 연결된 챗키피디아 항목 하이라이트 */
-function highlightLinkedEntry() {
-    try {
-        let charName = null;
-        // this_chid로 현재 캐릭터 이름 확인
-        if (typeof this_chid !== 'undefined' && this_chid != null && Array.isArray(characters)) {
-            charName = characters[this_chid]?.name;
-        }
-        if (!charName) {
-            charName = $('#char-name, .character_name_value, .ch_name').first().text().trim();
-        }
-        if (!charName) return;
-
-        const links = getSettings().charLinks || {};
-        const linkedId = links[charName];
-        if (!linkedId) return;
-
-        const entry = getEntries().find(e => e.id === linkedId);
-        if (!entry) return;
-
-        // 연결된 캐릭터가 있는 탭으로 이동 + 항목 선택
-        if (entry.type !== state.activeTab) {
-            state.activeTab = entry.type;
-        }
-        state.selectedId = linkedId;
-        renderAll();
-        // 시각적 알림
-        showToast(`🔗 "${entry.name}" 항목과 연결됨`);
-    } catch(e) { console.warn('[챗키피디아] highlightLinkedEntry:', e); }
-}
 
 // ============================================================
 // 설정 패널 (Extensions 탭 토글 내부)
 // ============================================================
 
+function refreshSettingsPanel() {
+    const panel = document.getElementById('chatpedia-settings-panel');
+    if (!panel) return;
+    panel.innerHTML = buildSettingsPanelHTML();
+    bindSettingsPanelEvents(panel);
+}
+
 function buildSettingsPanel() {
     if (document.getElementById('chatpedia-settings-panel')) return;
 
-    // 레퍼런스와 동일한 방식: #extensions_settings에 직접 append
     const html = `
         <div id="chatpedia_ext_container">
             <div class="inline-drawer">
-                <div class="inline-drawer-toggle inline-drawer-header">
+                <div class="inline-drawer-toggle inline-drawer-header" id="chatpedia-drawer-toggle">
                     <b>📚 챗키피디아</b>
                     <div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div>
                 </div>
@@ -803,56 +700,25 @@ function buildSettingsPanel() {
     $('#extensions_settings').append(html);
     const panel = document.getElementById('chatpedia-settings-panel');
     if (panel) bindSettingsPanelEvents(panel);
+
+    // 토글 열릴 때마다 ST 데이터 새로 읽어서 갱신
+    document.getElementById('chatpedia-drawer-toggle')?.addEventListener('click', () => {
+        // inline-drawer가 열리는 방향일 때만 (닫힐 때는 불필요)
+        const content = document.querySelector('#chatpedia_ext_container .inline-drawer-content');
+        const isOpening = content && getComputedStyle(content).display === 'none';
+        if (isOpening) {
+            // 약간의 딜레이 후 갱신 (ST 애니메이션 완료 후)
+            setTimeout(refreshSettingsPanel, 80);
+        }
+    });
 }
 
 function buildSettingsPanelHTML() {
     const s = getSettings();
-    const chars   = getSTCharacters();
-    const pers    = getSTPers();
-    const entries = getEntries();
-    const charEntries    = entries.filter(e => e.type === 'character');
-    const personaEntries = entries.filter(e => e.type === 'persona');
-    const profiles       = getConnectionProfiles();
-
-    const charLinkRows = chars.length ? chars.map(c => {
-        const linked = s.charLinks[c.name] || '';
-        return `<div class="cp-set-link-row">
-            <span class="cp-set-link-name" title="${esc(c.name)}">${esc(c.name)}</span>
-            <select class="cp-set-select cp-char-link-sel" data-char="${esc(c.name)}">
-                <option value="">— 연결 안 함 —</option>
-                ${charEntries.map(e => `<option value="${esc(e.id)}"${linked===e.id?' selected':''}>${esc(e.name)}</option>`).join('')}
-            </select>
-        </div>`;
-    }).join('') : `<p class="cp-set-hint">ST에서 캐릭터가 로드되지 않았어요.</p>`;
-
-    const persLinkRows = pers.length ? pers.map(p => {
-        const linked = s.personaLinks[p.id] || '';
-        return `<div class="cp-set-link-row">
-            <span class="cp-set-link-name" title="${esc(p.name)}">${esc(p.name)}</span>
-            <select class="cp-set-select cp-pers-link-sel" data-pers="${esc(p.id)}">
-                <option value="">— 연결 안 함 —</option>
-                ${personaEntries.map(e => `<option value="${esc(e.id)}"${linked===e.id?' selected':''}>${esc(e.name)}</option>`).join('')}
-            </select>
-        </div>`;
-    }).join('') : `<p class="cp-set-hint">ST에서 페르소나가 로드되지 않았어요.</p>`;
-
-    // 프로필 select는 항상 표시 — bindSettingsPanelEvents에서 실시간으로 채움
-    const profileRows = `
-        <div class="cp-set-row">
-            <label class="cp-set-label">연결 프로필 전환</label>
-            <div class="cp-set-profile-wrap">
-                <select class="cp-set-select" id="cp-profile-select">
-                    <option value="">— 불러오는 중... —</option>
-                </select>
-                <button class="cp-set-btn-apply" id="cp-profile-apply">적용</button>
-            </div>
-            <p class="cp-set-hint">선택한 연결 프로필로 즉시 전환합니다.</p>
-        </div>`;
-
     return `
     <div class="cp-settings">
 
-        <!-- ── 표시 설정 ── -->
+        <!-- 표시 설정 -->
         <div class="cp-set-section">
             <div class="cp-set-section-title">🎨 표시 설정</div>
 
@@ -865,15 +731,6 @@ function buildSettingsPanelHTML() {
                 <p class="cp-set-hint">뷰 모드에서 값이 없는 필드를 숨겨요.</p>
             </div>
 
-            <div class="cp-set-row cp-set-toggle-row">
-                <label class="cp-set-label">플로팅 버튼 표시</label>
-                <label class="cp-toggle">
-                    <input type="checkbox" id="cp-opt-showFloat" ${s.showFloatBtn ? 'checked' : ''}>
-                    <span class="cp-toggle-track"><span class="cp-toggle-thumb"></span></span>
-                </label>
-                <p class="cp-set-hint">화면 우하단의 📚 버튼 표시 여부.</p>
-            </div>
-
             <div class="cp-set-row">
                 <label class="cp-set-label">기본 탭</label>
                 <select class="cp-set-select" id="cp-opt-defaultTab">
@@ -884,27 +741,7 @@ function buildSettingsPanelHTML() {
             </div>
         </div>
 
-        <!-- ── 연결 프로필 ── -->
-        <div class="cp-set-section">
-            <div class="cp-set-section-title">🔌 연결 프로필</div>
-            ${profileRows}
-        </div>
-
-        <!-- ── 캐릭터 카드 연결 ── -->
-        <div class="cp-set-section">
-            <div class="cp-set-section-title">⚔️ 캐릭터 카드 연결</div>
-            <p class="cp-set-hint" style="margin-bottom:8px">ST 캐릭터와 챗키피디아 항목을 1:1 매핑합니다. 챗키피디아를 열면 연결된 항목이 자동으로 선택돼요.</p>
-            <div class="cp-set-link-list" id="cp-char-link-list">${charLinkRows}</div>
-        </div>
-
-        <!-- ── 페르소나 연결 ── -->
-        <div class="cp-set-section">
-            <div class="cp-set-section-title">🎭 페르소나 연결</div>
-            <p class="cp-set-hint" style="margin-bottom:8px">ST 페르소나와 챗키피디아 페르소나 항목을 연결합니다.</p>
-            <div class="cp-set-link-list" id="cp-pers-link-list">${persLinkRows}</div>
-        </div>
-
-        <!-- ── 데이터 관리 ── -->
+        <!-- 데이터 관리 -->
         <div class="cp-set-section">
             <div class="cp-set-section-title">📦 데이터 관리</div>
 
@@ -934,81 +771,22 @@ function buildSettingsPanelHTML() {
 }
 
 function bindSettingsPanelEvents(panel) {
-    // ── 표시 옵션 ──────────────────────────────────────────
+    // 빈 필드 숨기기
     panel.querySelector('#cp-opt-hideEmpty')?.addEventListener('change', e => {
         setOpt('hideEmptyFields', e.target.checked);
         showToast(e.target.checked ? '빈 필드를 숨겨요' : '빈 필드를 표시해요');
     });
 
-    panel.querySelector('#cp-opt-showFloat')?.addEventListener('change', e => {
-        setOpt('showFloatBtn', e.target.checked);
-        syncFloatBtn();
-        showToast(e.target.checked ? '플로팅 버튼을 표시해요' : '플로팅 버튼을 숨겼어요');
-    });
-
+    // 기본 탭
     panel.querySelector('#cp-opt-defaultTab')?.addEventListener('change', e => {
         setOpt('defaultTab', e.target.value);
         showToast('기본 탭이 변경됐어요');
     });
 
-    // ── 연결 프로필 select 실시간 채우기 ────────────────
-    const profileSel = panel.querySelector('#cp-profile-select');
-    if (profileSel) {
-        const profiles = getConnectionProfiles();
-        profileSel.innerHTML = profiles.length
-            ? profiles.map(p => `<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('')
-            : '<option value="">등록된 프로필이 없어요</option>';
-    }
-
-    // ── 연결 프로필 적용 ─────────────────────────────────
-    panel.querySelector('#cp-profile-apply')?.addEventListener('click', () => {
-        const sel = panel.querySelector('#cp-profile-select');
-        const val = sel?.value;
-        if (!val) { showToast('프로필을 선택해 주세요'); return; }
-        // ST 연결 프로필 전환 시도
-        try {
-            // 방법 1: ST 내부 함수 호출
-            if (typeof window.selectConnectionProfile === 'function') {
-                window.selectConnectionProfile(val);
-            } else {
-                // 방법 2: 드롭다운 직접 조작 (레퍼런스와 동일)
-                $('#connection_profiles').val(val).trigger('change');
-            }
-            showToast(`✅ 프로필 "${sel.options[sel.selectedIndex]?.text}" 적용됨`);
-        } catch(e) {
-            showToast('프로필 전환에 실패했어요');
-            console.warn('[챗키피디아] 프로필 전환 실패:', e);
-        }
-    });
-
-    // ── 캐릭터 연결 ──────────────────────────────────────
-    panel.querySelectorAll('.cp-char-link-sel').forEach(sel => {
-        sel.addEventListener('change', () => {
-            const charName = sel.dataset.char;
-            const links = getSettings().charLinks;
-            if (sel.value) links[charName] = sel.value;
-            else delete links[charName];
-            saveSettingsDebounced();
-            showToast(`"${charName}" 연결 저장됨`);
-        });
-    });
-
-    // ── 페르소나 연결 ────────────────────────────────────
-    panel.querySelectorAll('.cp-pers-link-sel').forEach(sel => {
-        sel.addEventListener('change', () => {
-            const persId = sel.dataset.pers;
-            const links  = getSettings().personaLinks;
-            if (sel.value) links[persId] = sel.value;
-            else delete links[persId];
-            saveSettingsDebounced();
-            showToast(`페르소나 연결 저장됨`);
-        });
-    });
-
-    // ── 내보내기 ─────────────────────────────────────────
+    // 내보내기
     panel.querySelector('#cp-export-btn')?.addEventListener('click', () => {
         const data = {
-            version: '1.1.0',
+            version: '1.2.0',
             exportedAt: new Date().toISOString(),
             entries:      getEntries(),
             customFields: getCustomFields(),
@@ -1023,7 +801,7 @@ function bindSettingsPanelEvents(panel) {
         showToast('📥 내보내기 완료!');
     });
 
-    // ── 가져오기 ─────────────────────────────────────────
+    // 가져오기
     const importFile = panel.querySelector('#cp-import-file');
     panel.querySelector('#cp-import-btn')?.addEventListener('click', () => importFile?.click());
     importFile?.addEventListener('change', e => {
@@ -1033,23 +811,17 @@ function bindSettingsPanelEvents(panel) {
         reader.onload = ev => {
             try {
                 const data = JSON.parse(ev.target.result);
-                const incoming = data.entries || data; // 구버전 호환
+                const incoming = data.entries || data;
                 if (!Array.isArray(incoming)) throw new Error('올바른 형식이 아니에요');
-
-                const existing  = getEntries();
-                const existMap  = Object.fromEntries(existing.map(e => [e.id, e]));
+                const existMap = Object.fromEntries(getEntries().map(e => [e.id, e]));
                 incoming.forEach(e => { existMap[e.id] = e; });
                 saveEntries(Object.values(existMap));
-
                 if (Array.isArray(data.customFields)) {
-                    const cf = getCustomFields();
-                    const cfMap = Object.fromEntries(cf.map(f => [f.key, f]));
+                    const cfMap = Object.fromEntries(getCustomFields().map(f => [f.key, f]));
                     data.customFields.forEach(f => { cfMap[f.key] = f; });
                     saveCustomFields(Object.values(cfMap));
                 }
-
                 showToast(`✅ ${incoming.length}개 항목 가져오기 완료!`);
-                // 설정 패널 새로고침
                 const p = document.getElementById('chatpedia-settings-panel');
                 if (p) { p.innerHTML = buildSettingsPanelHTML(); bindSettingsPanelEvents(p); }
             } catch(err) {
@@ -1060,15 +832,12 @@ function bindSettingsPanelEvents(panel) {
         reader.readAsText(file);
     });
 
-    // ── 초기화 ───────────────────────────────────────────
+    // 초기화
     panel.querySelector('#cp-reset-btn')?.addEventListener('click', () => {
         showConfirm('⚠️ 모든 데이터를 삭제할까요?\n되돌릴 수 없어요!', () => {
             getSettings().entries      = [];
             getSettings().customFields = [];
-            getSettings().charLinks    = {};
-            getSettings().personaLinks = {};
             saveSettingsDebounced();
-            // 패널 새로고침
             const p = document.getElementById('chatpedia-settings-panel');
             if (p) { p.innerHTML = buildSettingsPanelHTML(); bindSettingsPanelEvents(p); }
             showToast('🗑️ 전체 데이터 삭제됨');
@@ -1076,28 +845,3 @@ function bindSettingsPanelEvents(panel) {
     });
 }
 
-// ============================================================
-// 진입점
-// ============================================================
-
-jQuery(async () => {
-    if (!extension_settings[EXT_NAME]) {
-        extension_settings[EXT_NAME] = structuredClone(DEFAULT_SETTINGS);
-    }
-    // 기본 탭 상태 동기화
-    state.activeTab = getOpt('defaultTab') || 'character';
-
-    buildModal();
-    buildTriggerButton();
-    syncFloatBtn();
-    registerWandButton();
-    buildSettingsPanel();
-
-    // ST 캐릭터 변경 이벤트 감지 → 연결된 항목 하이라이트
-    $(document).on('characterSelected', () => {
-        const overlay = document.getElementById('chatpedia-overlay');
-        if (overlay?.classList.contains('active')) highlightLinkedEntry();
-    });
-
-    console.log('[챗키피디아] 로드 완료 ✅');
-});
