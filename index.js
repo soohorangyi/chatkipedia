@@ -597,6 +597,45 @@ function toggleMobileView(show) {
 // ============================================================
 
 // ── 로어북 탭 선택 팝업 ──────────────────────────────────
+// ── JSON 붙여넣기 다이얼로그 ──────────────────────────────
+function showJsonPasteDialog(onConfirm) {
+    const o = document.createElement('div');
+    o.className = 'cp-confirm-overlay';
+    o.innerHTML = `
+        <div class="cp-confirm-box cp-paste-box">
+            <div class="cp-confirm-icon">📋</div>
+            <p class="cp-confirm-msg">챗키피디아 백업 JSON을<br>아래에 붙여넣어 주세요</p>
+            <textarea class="cp-paste-textarea" id="cp-paste-input"
+                placeholder='{"version":"1.2.0","entries":[...]}'
+                spellcheck="false"></textarea>
+            <div class="cp-confirm-btns" style="margin-top:12px;">
+                <button class="cp-confirm-no" id="cp-paste-cancel">취소</button>
+                <button class="cp-confirm-yes" id="cp-paste-ok" style="background:#6B93B8;">불러오기</button>
+            </div>
+        </div>`;
+    document.body.appendChild(o);
+
+    const textarea = o.querySelector('#cp-paste-input');
+    setTimeout(() => textarea?.focus(), 50);
+
+    o.querySelector('#cp-paste-cancel').addEventListener('click', () => o.remove());
+    o.querySelector('#cp-paste-ok').addEventListener('click', () => {
+        const text = textarea?.value.trim();
+        if (!text) { showToast('JSON을 붙여넣어 주세요!'); return; }
+        o.remove();
+        onConfirm(text);
+    });
+    // Ctrl+Enter로도 확인
+    textarea?.addEventListener('keydown', e => {
+        if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+            o.querySelector('#cp-paste-ok').click();
+        }
+        if (e.key === 'Escape') o.remove();
+    });
+    o.addEventListener('click', e => { if (e.target === o) o.remove(); });
+}
+
+
 function showTypeSelect(name, onSelect) {
     const o = document.createElement('div');
     o.className = 'cp-confirm-overlay';
@@ -765,11 +804,9 @@ function buildSettingsPanelHTML() {
             <div class="cp-set-row">
                 <label class="cp-set-label">가져오기 (Import)</label>
                 <div class="cp-set-import-wrap">
-                    <input type="file" id="cp-import-file" accept=".json"
-                        style="position:absolute;opacity:0;width:0;height:0;overflow:hidden;">
-                    <label for="cp-import-file" class="cp-set-btn" style="cursor:pointer;display:inline-block;">⬆️ JSON 불러오기</label>
+                    <button class="cp-set-btn" id="cp-import-btn">⬆️ JSON 붙여넣기</button>
                 </div>
-                <p class="cp-set-hint">기존 데이터에 <b>병합</b>됩니다. 같은 ID는 덮어씌워져요.</p>
+                <p class="cp-set-hint">버튼을 누르면 JSON 붙여넣기 창이 열려요. 기존 데이터에 <b>병합</b>됩니다.</p>
             </div>
 
             <div class="cp-set-row cp-set-danger-row">
@@ -815,14 +852,11 @@ function bindSettingsPanelEvents(panel) {
 
     // 가져오기
     const importFile = panel.querySelector('#cp-import-file');
-    // import는 label[for=cp-import-file]이 직접 처리
-    importFile?.addEventListener('change', e => {
-        const file = e.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = ev => {
+    // JSON 붙여넣기 방식
+    panel.querySelector('#cp-import-btn')?.addEventListener('click', () => {
+        showJsonPasteDialog((jsonText) => {
             try {
-                const data = JSON.parse(ev.target.result);
+                const data = JSON.parse(jsonText);
 
                 // ── ST 로어북 형식 감지 ──
                 // 구조: { entries: { "0": { comment, content }, "1": {...} } }
@@ -1098,9 +1132,7 @@ function bindSettingsPanelEvents(panel) {
                 showToast(`❌ 가져오기 실패: ${err.message}`);
                 console.error('[챗키피디아] import error:', err);
             }
-            importFile.value = '';
-        };
-        reader.readAsText(file);
+        });
     });
 
     // 초기화
