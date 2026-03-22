@@ -450,6 +450,18 @@
 }
 .cp-confirm-no:hover { background: #D8EDF5; }
 
+/* 로어북 탭 선택 버튼 */
+.cp-type-char, .cp-type-pers {
+    padding: 8px 18px;
+    border: 1px solid #C5DCE8; border-radius: 8px;
+    font-family: 'Pretendard', -apple-system, sans-serif;
+    font-size: 13px; font-weight: 600; cursor: pointer; transition: all .15s;
+}
+.cp-type-char { background: rgba(107,147,184,.1); color: #4A7499; }
+.cp-type-char:hover { background: rgba(107,147,184,.2); border-color: #6B93B8; }
+.cp-type-pers { background: rgba(160,196,216,.1); color: #5A8A9F; }
+.cp-type-pers:hover { background: rgba(160,196,216,.2); border-color: #A0C4D8; }
+
 .cp-toast {
     position: fixed; bottom: 20px; left: 50%;
     transform: translateX(-50%) translateY(16px);
@@ -562,4 +574,15 @@
 
 
 @media (max-width: 480px) {
+}
+
+/* 탭 이동 버튼 */
+#chatpedia-modal .cp-btn-move {
+    padding: 5px 11px; border-radius: var(--cp-r);
+    font-family: 'Pretendard', -apple-system, sans-serif; font-size: 12px;
+    cursor: pointer; transition: all .15s; border: 1px solid var(--cp-border);
+    background: transparent; color: var(--cp-text-mt);
+}
+#chatpedia-modal .cp-btn-move:hover {
+    background: rgba(107,147,184,.1); border-color: var(--cp-gold); color: var(--cp-gold);
 }
