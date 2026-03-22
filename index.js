@@ -559,12 +559,20 @@ function toggleMobileView(show) {
 function showConfirm(msg, onYes) {
     const o = document.createElement('div');
     o.className = 'cp-confirm-overlay';
-    o.innerHTML = `<div class="cp-confirm-box"><p>${esc(msg)}</p>
-        <div class="cp-confirm-btns">
-            <button class="cp-confirm-no">취소</button>
-            <button class="cp-confirm-yes">삭제</button>
-        </div></div>`;
+    // 개행 문자를 <br>로 변환
+    const msgHtml = esc(msg).replace(/\n/g, '<br>');
+    o.innerHTML = `
+        <div class="cp-confirm-box">
+            <div class="cp-confirm-icon">⚠️</div>
+            <p class="cp-confirm-msg">${msgHtml}</p>
+            <div class="cp-confirm-btns">
+                <button class="cp-confirm-no">취소</button>
+                <button class="cp-confirm-yes">삭제</button>
+            </div>
+        </div>`;
     document.body.appendChild(o);
+    // 오버레이 클릭으로도 닫기
+    o.addEventListener('click', e => { if (e.target === o) o.remove(); });
     o.querySelector('.cp-confirm-yes').addEventListener('click', () => { o.remove(); onYes(); });
     o.querySelector('.cp-confirm-no').addEventListener('click', () => o.remove());
 }
@@ -757,30 +765,67 @@ function bindSettingsPanelEvents(panel) {
 
                 // ── 배열 형태 추출 (다양한 JSON 구조 대응) ──
                 let incoming = null;
-                if (Array.isArray(data))               incoming = data;           // 최상위가 배열
-                else if (Array.isArray(data.entries))  incoming = data.entries;   // { entries: [...] }
-                else if (Array.isArray(data.personas)) incoming = data.personas;  // { personas: [...] }
-                else if (Array.isArray(data.data))     incoming = data.data;      // { data: [...] }
+                if (Array.isArray(data))                   incoming = data;
+                else if (Array.isArray(data.entries))      incoming = data.entries;
+                else if (Array.isArray(data.personas))     incoming = data.personas;
+                else if (Array.isArray(data.characters))   incoming = data.characters;
+                else if (Array.isArray(data.data))         incoming = data.data;
+                else if (Array.isArray(data.items))        incoming = data.items;
                 else {
-                    // 객체의 값들이 배열 요소일 수도 있음 — 객체면 values로 변환 시도
-                    const vals = Object.values(data);
-                    if (vals.length && typeof vals[0] === 'object' && !Array.isArray(vals[0])) {
-                        incoming = vals;
-                    }
+                    // 객체의 값들이 모두 객체면 배열로 변환 시도
+                    const vals = Object.values(data).filter(v => v && typeof v === 'object' && !Array.isArray(v));
+                    if (vals.length > 0) incoming = vals;
                 }
                 if (!incoming || !Array.isArray(incoming)) {
                     throw new Error('배열 데이터를 찾을 수 없어요. JSON 구조를 확인해 주세요.');
                 }
 
-                // ── 각 항목 정규화 (id, type 없으면 자동 생성) ──
-                const now = Date.now();
-                const activeTab = state.activeTab; // 현재 탭을 기본 type으로 사용
-                const normalized = incoming.map((item, idx) => ({
-                    ...item,
-                    id:   item.id   || genId(),
-                    type: item.type || activeTab,   // type 없으면 현재 탭으로
-                    name: item.name || item.이름 || item.title || `항목 ${idx + 1}`,
-                }));
+                // ── 각 항목 정규화 ──
+                // 챗키피디아 필드 → JSON에서 가능한 키 이름 목록
+                const FIELD_MAP = {
+                    name:        ['name','이름','名前','nombre','nom'],
+                    age:         ['age','나이','年齢'],
+                    gender:      ['gender','성별','性別','sexo'],
+                    orientation: ['orientation','성지향성'],
+                    nationality: ['nationality','국적','国籍'],
+                    job:         ['job','직업','occupation','職業'],
+                    family:      ['family','가족관계','familyRelations'],
+                    appearance:  ['appearance','외모','外見','looks','description'],
+                    personality: ['personality','성격','性格','character','persona'],
+                    speech:      ['speech','말투','speaking','speakingStyle','tone'],
+                };
+                function pickField(item, keys) {
+                    for (const k of keys) {
+                        if (item[k] !== undefined && item[k] !== null && String(item[k]).trim() !== '') {
+                            return String(item[k]).trim();
+                        }
+                    }
+                    return '';
+                }
+
+                const activeTab = state.activeTab;
+                const normalized = incoming.map((item, idx) => {
+                    // 이미 챗키피디아 형식이면 그대로 사용
+                    const isChatpedia = item.id && (item.type === 'character' || item.type === 'persona');
+                    if (isChatpedia) return { ...item };
+
+                    // 외부 JSON → 필드 매핑
+                    const mapped = {
+                        id:   item.id || genId(),
+                        type: item.type || activeTab,
+                        createdAt: item.createdAt || Date.now(),
+                        tags: Array.isArray(item.tags) ? item.tags : [],
+                    };
+                    for (const [field, keys] of Object.entries(FIELD_MAP)) {
+                        mapped[field] = pickField(item, keys);
+                    }
+                    // name이 여전히 없으면 첫 번째 문자열 값 또는 인덱스 사용
+                    if (!mapped.name) {
+                        const firstStr = Object.values(item).find(v => typeof v === 'string' && v.trim());
+                        mapped.name = firstStr || `항목 ${idx + 1}`;
+                    }
+                    return mapped;
+                });
 
                 // ── 기존 데이터에 병합 (id 기준) ──
                 const existMap = Object.fromEntries(getEntries().map(e => [e.id, e]));
