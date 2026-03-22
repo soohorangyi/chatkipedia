@@ -256,10 +256,10 @@ function renderEditForm(panel) {
     const baseHtml = BASE_FIELDS.map(f => renderFormField(f, entry)).join('');
 
     const customHtml = state.editCustomFields.map((f, idx) => `
-        <div class="cp-form-group cp-form-full">
+        <div class="cp-form-group cp-form-full" data-custom-key="${esc(f.key)}">
             <div class="cp-custom-field-header">
                 <label class="cp-form-label">${esc(f.label)} <span class="cp-custom-badge">커스텀</span></label>
-                <button class="cp-btn-remove-field" data-idx="${idx}" title="필드 삭제">✕ 삭제</button>
+                <button class="cp-btn-remove-field" data-key="${esc(f.key)}" data-idx="${idx}" title="필드 삭제">✕ 삭제</button>
             </div>
             ${f.type === 'textarea'
                 ? `<textarea class="cp-form-textarea" name="custom_${esc(f.key)}" rows="${f.rows||2}" placeholder="${esc(f.placeholder)}">${esc(entry[f.key]||'')}</textarea>`
@@ -320,38 +320,47 @@ function renderEditForm(panel) {
     // 커스텀 필드 삭제
     panel.querySelectorAll('.cp-btn-remove-field').forEach(btn => {
         btn.addEventListener('click', () => {
-            const idx = parseInt(btn.dataset.idx);
-            const key = state.editCustomFields[idx]?.key;
-            state.editCustomFields.splice(idx, 1);
-            saveCustomFields(getCustomFields().filter(f => f.key !== key));
-            renderDetail();
+            const key = btn.dataset.key || state.editCustomFields[parseInt(btn.dataset.idx)]?.key;
+            if (key) removeCustomFieldRow(panel, key);
         });
     });
 
     // 필드 추가 버튼
     panel.querySelector('#cp-btn-add-field')?.addEventListener('click', () => {
-        state.showAddField = true; renderDetail();
-        setTimeout(() => document.getElementById('cp-new-field-label')?.focus(), 30);
+        // 전체 폼 재렌더 대신 해당 영역만 교체 → 기존 입력값 보존
+        const btn = panel.querySelector('#cp-btn-add-field');
+        if (!btn) return;
+        btn.outerHTML = `
+            <div class="cp-add-field-form cp-form-full" id="cp-add-field-inline">
+                <div class="cp-add-field-title">➕ 새 필드 추가</div>
+                <div class="cp-add-field-grid">
+                    <div class="cp-form-group">
+                        <label class="cp-form-label">필드 이름 *</label>
+                        <input class="cp-form-input" id="cp-new-field-label" type="text" placeholder="예: 특기, 좋아하는 것">
+                    </div>
+                    <div class="cp-form-group">
+                        <label class="cp-form-label">입력 형태</label>
+                        <select class="cp-form-select" id="cp-new-field-type">
+                            <option value="input">한 줄 텍스트</option>
+                            <option value="textarea">여러 줄 텍스트</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="cp-add-field-actions">
+                    <button class="cp-btn-cancel-small" id="cp-cancel-field">취소</button>
+                    <button class="cp-btn-confirm-field" id="cp-confirm-field">추가하기</button>
+                </div>
+            </div>`;
+        state.showAddField = true;
+        // 새로 삽입된 요소에 이벤트 바인딩
+        const inlineForm = panel.querySelector('#cp-add-field-inline');
+        bindAddFieldForm(panel, inlineForm);
+        setTimeout(() => panel.querySelector('#cp-new-field-label')?.focus(), 30);
     });
 
     // 필드 추가 확인
-    panel.querySelector('#cp-confirm-field')?.addEventListener('click', () => {
-        const labelEl = document.getElementById('cp-new-field-label');
-        const typeEl  = document.getElementById('cp-new-field-type');
-        const label   = labelEl?.value.trim();
-        if (!label) { showToast('필드 이름을 입력해 주세요!'); labelEl?.focus(); return; }
-        const key = 'custom_' + label.replace(/[^\w가-힣]/g, '_').toLowerCase() + '_' + Date.now().toString(36).slice(-4);
-        const nf = { key, label, type: typeEl?.value || 'input', placeholder: `${label}을(를) 입력하세요`, full: true, rows: 2 };
-        const g = getCustomFields(); g.push(nf); saveCustomFields(g);
-        state.editCustomFields.push(nf);
-        state.showAddField = false;
-        renderDetail(); showToast(`"${label}" 필드가 추가됐어요!`);
-    });
-
-    // 필드 추가 취소
-    panel.querySelector('#cp-cancel-field')?.addEventListener('click', () => {
-        state.showAddField = false; renderDetail();
-    });
+    // confirm/cancel은 bindAddFieldForm()으로 이동됨 (인라인 삽입 방식)
+    // 초기 showAddField=false 상태이므로 이미 버튼 형태로 렌더됨
 
     // 태그 입력
     setupTagInput(panel);
@@ -389,6 +398,114 @@ function renderEditForm(panel) {
         state.mode = 'view'; state.showAddField = false;
         renderDetail();
     });
+}
+
+
+// ── 인라인 필드 추가 폼 이벤트 바인딩 (전체 재렌더 없이 동작) ──────
+function bindAddFieldForm(panel, formEl) {
+    if (!formEl) return;
+
+    formEl.querySelector('#cp-confirm-field')?.addEventListener('click', () => {
+        const labelEl = formEl.querySelector('#cp-new-field-label');
+        const typeEl  = formEl.querySelector('#cp-new-field-type');
+        const label   = labelEl?.value.trim();
+        if (!label) { showToast('필드 이름을 입력해 주세요!'); labelEl?.focus(); return; }
+
+        const key = 'custom_' + label.replace(/[^\w가-힣]/g, '_').toLowerCase()
+                    + '_' + Date.now().toString(36).slice(-4);
+        const nf = { key, label, type: typeEl?.value || 'input',
+                     placeholder: `${label}을(를) 입력하세요`, full: true, rows: 2 };
+
+        // 전역 저장
+        const g = getCustomFields(); g.push(nf); saveCustomFields(g);
+        state.editCustomFields.push(nf);
+        state.showAddField = false;
+
+        // 폼을 제거하고 → 새 커스텀 필드 행 + "필드 추가" 버튼 다시 삽입
+        const fieldType = nf.type === 'textarea'
+            ? `<textarea class="cp-form-textarea" name="custom_${esc(nf.key)}" rows="${nf.rows||2}" placeholder="${esc(nf.placeholder)}"></textarea>`
+            : `<input class="cp-form-input" type="text" name="custom_${esc(nf.key)}" placeholder="${esc(nf.placeholder)}">`;
+
+        const newRow = document.createElement('div');
+        newRow.className = 'cp-form-group cp-form-full';
+        newRow.dataset.customKey = nf.key;
+        newRow.innerHTML = `
+            <div class="cp-custom-field-header">
+                <label class="cp-form-label">${esc(nf.label)} <span class="cp-custom-badge">커스텀</span></label>
+                <button class="cp-btn-remove-field" data-key="${esc(nf.key)}">✕ 삭제</button>
+            </div>
+            ${fieldType}`;
+
+        // 삭제 버튼 바인딩
+        newRow.querySelector('.cp-btn-remove-field').addEventListener('click', () => {
+            removeCustomFieldRow(panel, nf.key);
+        });
+
+        // 폼 자리에 새 행 삽입, 그 아래 "필드 추가" 버튼 복원
+        formEl.replaceWith(newRow);
+        insertAddFieldButton(panel);
+        showToast(`"${label}" 필드가 추가됐어요!`);
+    });
+
+    formEl.querySelector('#cp-cancel-field')?.addEventListener('click', () => {
+        state.showAddField = false;
+        formEl.replaceWith(createAddFieldButton(panel));
+    });
+}
+
+function createAddFieldButton(panel) {
+    const btn = document.createElement('button');
+    btn.className = 'cp-btn-add-field';
+    btn.id = 'cp-btn-add-field';
+    btn.textContent = '＋ 필드 추가';
+    btn.addEventListener('click', () => {
+        btn.outerHTML = `
+            <div class="cp-add-field-form cp-form-full" id="cp-add-field-inline">
+                <div class="cp-add-field-title">➕ 새 필드 추가</div>
+                <div class="cp-add-field-grid">
+                    <div class="cp-form-group">
+                        <label class="cp-form-label">필드 이름 *</label>
+                        <input class="cp-form-input" id="cp-new-field-label" type="text" placeholder="예: 특기, 좋아하는 것">
+                    </div>
+                    <div class="cp-form-group">
+                        <label class="cp-form-label">입력 형태</label>
+                        <select class="cp-form-select" id="cp-new-field-type">
+                            <option value="input">한 줄 텍스트</option>
+                            <option value="textarea">여러 줄 텍스트</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="cp-add-field-actions">
+                    <button class="cp-btn-cancel-small" id="cp-cancel-field">취소</button>
+                    <button class="cp-btn-confirm-field" id="cp-confirm-field">추가하기</button>
+                </div>
+            </div>`;
+        state.showAddField = true;
+        const inlineForm = panel.querySelector('#cp-add-field-inline');
+        bindAddFieldForm(panel, inlineForm);
+        setTimeout(() => panel.querySelector('#cp-new-field-label')?.focus(), 30);
+    });
+    return btn;
+}
+
+function insertAddFieldButton(panel) {
+    // 태그 입력 컨테이너 바로 앞의 cp-form-full 영역에 삽입
+    const tagGroup = panel.querySelector('#cp-tags-container')?.closest('.cp-form-group');
+    if (tagGroup) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'cp-form-full';
+        wrapper.appendChild(createAddFieldButton(panel));
+        tagGroup.parentNode.insertBefore(wrapper, tagGroup);
+    }
+}
+
+function removeCustomFieldRow(panel, key) {
+    // 전역 커스텀 필드에서 제거
+    saveCustomFields(getCustomFields().filter(f => f.key !== key));
+    state.editCustomFields = state.editCustomFields.filter(f => f.key !== key);
+    // DOM에서 해당 행만 제거
+    const row = panel.querySelector(`[data-custom-key="${key}"]`);
+    row?.closest('.cp-form-group, .cp-form-full')?.remove() || row?.remove();
 }
 
 function renderFormField(f, entry) {
