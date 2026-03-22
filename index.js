@@ -214,6 +214,7 @@ function renderViewMode(panel, entry) {
                     </div>
                 </div>
                 <div class="cp-view-actions">
+                    <button class="cp-btn-move" id="cp-btn-move" title="${entry.type === 'character' ? '페르소나 탭으로 이동' : '캐릭터 탭으로 이동'}">${entry.type === 'character' ? '🎭' : '⚔️'} 이동</button>
                     <button class="cp-btn-edit" id="cp-btn-edit">✏️ 편집</button>
                     <button class="cp-btn-delete" id="cp-btn-delete">🗑 삭제</button>
                 </div>
@@ -237,6 +238,21 @@ function renderViewMode(panel, entry) {
             saveEntries(getEntries().filter(e => e.id !== entry.id));
             state.selectedId = null; state.mode = 'view';
             toggleMobileView('list'); renderAll(); showToast('삭제되었어요');
+        });
+    });
+
+    panel.querySelector('#cp-btn-move')?.addEventListener('click', () => {
+        const targetType = entry.type === 'character' ? 'persona' : 'character';
+        const targetLabel = targetType === 'character' ? '캐릭터' : '페르소나';
+        showConfirm(`"${entry.name || '이 항목'}"을\n${targetLabel} 탭으로 이동할까요?`, () => {
+            const entries = getEntries();
+            const idx = entries.findIndex(e => e.id === entry.id);
+            if (idx !== -1) entries[idx] = { ...entries[idx], type: targetType };
+            saveEntries(entries);
+            state.activeTab = targetType;
+            state.selectedId = entry.id;
+            renderAll();
+            showToast(`${targetLabel} 탭으로 이동했어요!`);
         });
     });
 }
@@ -556,6 +572,26 @@ function toggleMobileView(show) {
 // 유틸 UI
 // ============================================================
 
+// ── 로어북 탭 선택 팝업 ──────────────────────────────────
+function showTypeSelect(name, onSelect) {
+    const o = document.createElement('div');
+    o.className = 'cp-confirm-overlay';
+    o.innerHTML = `
+        <div class="cp-confirm-box">
+            <div class="cp-confirm-icon">📂</div>
+            <p class="cp-confirm-msg">"${esc(name)}"을<br>어느 탭으로 가져올까요?</p>
+            <div class="cp-confirm-btns">
+                <button class="cp-type-char">⚔️ 캐릭터</button>
+                <button class="cp-type-pers">🎭 페르소나</button>
+            </div>
+        </div>`;
+    document.body.appendChild(o);
+    o.querySelector('.cp-type-char').addEventListener('click', () => { o.remove(); onSelect('character'); });
+    o.querySelector('.cp-type-pers').addEventListener('click', () => { o.remove(); onSelect('persona'); });
+    o.addEventListener('click', e => { if (e.target === o) o.remove(); });
+}
+
+
 function showConfirm(msg, onYes) {
     const o = document.createElement('div');
     o.className = 'cp-confirm-overlay';
@@ -770,16 +806,21 @@ function bindSettingsPanelEvents(panel) {
                     && Object.values(data.entries).some(e => e && e.content !== undefined);
 
                 if (isLorebook) {
-                    // 로어북 파일명에서 캐릭터 이름 추출 (파일명 = "Christine.json" → "Christine")
                     const lorebookName = file.name.replace(/\.json$/i, '');
 
-                    // entries를 comment → content 매핑으로 변환
+                    // disable=True 항목 제외, 내용 있는 것만
                     const lorebookEntries = Object.values(data.entries)
-                        .filter(e => e && e.content && String(e.content).trim())
+                        .filter(e => {
+                            if (!e || !e.content || !String(e.content).trim()) return false;
+                            // disable 필드가 True(문자열) 또는 true(불리언)면 제외
+                            const dis = e.disable;
+                            if (dis === true || dis === 'True' || dis === 'true') return false;
+                            return true;
+                        })
                         .sort((a, b) => (Number(b.order ?? b.displayIndex ?? 0)) - (Number(a.order ?? a.displayIndex ?? 0)));
 
                     if (lorebookEntries.length === 0) {
-                        throw new Error('로어북에 내용이 있는 항목이 없어요.');
+                        throw new Error('로어북에 활성화된 항목이 없어요. (disable=True 항목은 제외됩니다)');
                     }
 
                     // 각 로어북 항목 → 커스텀 필드로 저장
@@ -821,27 +862,34 @@ function bindSettingsPanelEvents(panel) {
                         lbEntry[customFieldsFromLorebook[i].key] = String(e.content).trim();
                     });
 
-                    // 커스텀 필드 전역 등록 (중복 key 방지)
-                    const existingCF = getCustomFields();
-                    const existingKeys = new Set(existingCF.map(f => f.key));
-                    const newCF = customFieldsFromLorebook
-                        .map(({ _fromLorebook, ...f }) => f)
-                        .filter(f => !existingKeys.has(f.key));
-                    saveCustomFields([...existingCF, ...newCF]);
+                    // 탭 선택 팝업 → 선택 후 저장
+                    const saveLorebook = (targetType) => {
+                        const entry = { ...lbEntry, type: targetType };
 
-                    // 항목 저장
-                    const existMap = Object.fromEntries(getEntries().map(e => [e.id, e]));
-                    existMap[lbEntry.id] = lbEntry;
-                    saveEntries(Object.values(existMap));
+                        // 커스텀 필드 전역 등록 (중복 key 방지)
+                        const existingCF = getCustomFields();
+                        const existingKeys = new Set(existingCF.map(f => f.key));
+                        const newCF = customFieldsFromLorebook
+                            .map(({ _fromLorebook, ...f }) => f)
+                            .filter(f => !existingKeys.has(f.key));
+                        saveCustomFields([...existingCF, ...newCF]);
 
-                    showToast(`✅ 로어북 "${lorebookName}" — ${lorebookEntries.length}개 항목으로 가져왔어요!`);
-                    const p = document.getElementById('chatpedia-settings-panel');
-                    if (p) { p.innerHTML = buildSettingsPanelHTML(); bindSettingsPanelEvents(p); }
-                    const overlay = document.getElementById('chatpedia-overlay');
-                    if (overlay?.classList.contains('active')) {
-                        state.selectedId = lbEntry.id;
-                        renderAll();
-                    }
+                        const existMap = Object.fromEntries(getEntries().map(e => [e.id, e]));
+                        existMap[entry.id] = entry;
+                        saveEntries(Object.values(existMap));
+
+                        showToast(`✅ 로어북 "${lorebookName}" — ${lorebookEntries.length}개 항목, ${targetType === 'character' ? '캐릭터' : '페르소나'} 탭으로!`);
+                        const p = document.getElementById('chatpedia-settings-panel');
+                        if (p) { p.innerHTML = buildSettingsPanelHTML(); bindSettingsPanelEvents(p); }
+                        const overlay = document.getElementById('chatpedia-overlay');
+                        if (overlay?.classList.contains('active')) {
+                            state.activeTab = targetType;
+                            state.selectedId = entry.id;
+                            renderAll();
+                        }
+                    };
+
+                    showTypeSelect(lorebookName, saveLorebook);
                     importFile.value = '';
                     return;
                 }
