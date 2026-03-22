@@ -766,7 +766,7 @@ function buildSettingsPanelHTML() {
                 <label class="cp-set-label">가져오기 (Import)</label>
                 <div class="cp-set-import-wrap">
                     <input type="file" id="cp-import-file" accept=".json"
-                        style="position:absolute;opacity:0;width:1px;height:1px;pointer-events:none;">
+                        style="position:absolute;opacity:0;width:0;height:0;overflow:hidden;">
                     <label for="cp-import-file" class="cp-set-btn" style="cursor:pointer;display:inline-block;">⬆️ JSON 불러오기</label>
                 </div>
                 <p class="cp-set-hint">기존 데이터에 <b>병합</b>됩니다. 같은 ID는 덮어씌워져요.</p>
