@@ -763,6 +763,50 @@ function bindSettingsPanelEvents(panel) {
             try {
                 const data = JSON.parse(ev.target.result);
 
+                // ── ST 캐릭터 카드 형식 감지 (chara_card_v2 / v3) ──
+                // 구조: { name, description, personality, spec: "chara_card_v3", ... }
+                const isCharaCard = data.spec && String(data.spec).startsWith('chara_card');
+                if (isCharaCard || (data.name && (data.description || data.personality) && !data.personas)) {
+                    // data.data가 있으면 그쪽이 더 완전한 정보
+                    const src = (data.data && data.data.name) ? data.data : data;
+
+                    const entry = {
+                        id:          genId(),
+                        type:        'character',   // 캐릭터 카드는 항상 캐릭터 탭
+                        createdAt:   Date.now(),
+                        name:        src.name || data.name || '이름 없음',
+                        appearance:  '',
+                        personality: src.personality || '',
+                        speech:      '',
+                        background:  src.description || '',
+                        age:         '',
+                        gender:      '',
+                        orientation: '',
+                        nationality: '',
+                        job:         '',
+                        family:      '',
+                        extra:       src.scenario   || '',
+                        tags:        Array.isArray(src.tags) ? src.tags : [],
+                    };
+
+                    const existMap = Object.fromEntries(getEntries().map(e => [e.id, e]));
+                    existMap[entry.id] = entry;
+                    saveEntries(Object.values(existMap));
+
+                    showToast(`✅ 캐릭터 "${entry.name}" 가져오기 완료!`);
+                    const p = document.getElementById('chatpedia-settings-panel');
+                    if (p) { p.innerHTML = buildSettingsPanelHTML(); bindSettingsPanelEvents(p); }
+                    const overlay = document.getElementById('chatpedia-overlay');
+                    if (overlay?.classList.contains('active')) {
+                        // 캐릭터 탭으로 전환 후 렌더
+                        state.activeTab = 'character';
+                        state.selectedId = entry.id;
+                        renderAll();
+                    }
+                    importFile.value = '';
+                    return;
+                }
+
                 // ── ST 페르소나 JSON 형식 감지 ──
                 // 구조: { personas: {"파일명":"이름"}, persona_descriptions: {"파일명":{description,...}} }
                 if (data.personas && data.persona_descriptions) {
@@ -855,9 +899,17 @@ function bindSettingsPanelEvents(panel) {
                     const isChatpedia = item.id && (item.type === 'character' || item.type === 'persona');
                     if (isChatpedia) return { ...item };
 
+                    // type 추론: 명시된 값 → spec으로 추론 → 현재 탭 순서
+                    let inferredType = item.type;
+                    if (!inferredType) {
+                        if (item.spec && String(item.spec).startsWith('chara_card')) inferredType = 'character';
+                        else if (item.persona_descriptions || item.personas) inferredType = 'persona';
+                        else inferredType = activeTab;
+                    }
+
                     const mapped = {
                         id:   item.id || genId(),
-                        type: item.type || activeTab,
+                        type: inferredType,
                         createdAt: item.createdAt || Date.now(),
                         tags: Array.isArray(item.tags) ? item.tags : [],
                     };
