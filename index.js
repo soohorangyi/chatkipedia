@@ -579,18 +579,15 @@ function syncFloatBtn() {
 
 /** ST 연결 프로필 목록 반환 */
 function getConnectionProfiles() {
-    try {
-        // SillyTavern stores connection profiles in power_user or oai_settings
-        const profiles = window?.connection_profiles || [];
-        if (Array.isArray(profiles) && profiles.length) return profiles;
-        // fallback: jQuery로 드롭다운에서 수집
-        const opts = [];
-        $('#connection_profiles_list option, #api_connection_profile option').each(function() {
-            const v = $(this).val(), t = $(this).text().trim();
-            if (v && v !== 'undefined') opts.push({ id: v, name: t });
-        });
-        return opts;
-    } catch { return []; }
+    // 레퍼런스(vocab-helper)와 동일한 방식: #connection_profiles option
+    const profiles = [];
+    $('#connection_profiles option').each(function() {
+        const val  = $(this).val();
+        const text = $(this).text().trim();
+        // <None> 항목도 포함 (val이 빈 문자열이거나 'none')
+        profiles.push({ id: val, name: text });
+    });
+    return profiles;
 }
 
 /** ST 캐릭터 목록 반환 */
@@ -722,18 +719,18 @@ function buildSettingsPanelHTML() {
         </div>`;
     }).join('') : `<p class="cp-set-hint">ST에서 페르소나가 로드되지 않았어요.</p>`;
 
-    const profileRows = profiles.length ? `
+    // 프로필 select는 항상 표시 — bindSettingsPanelEvents에서 실시간으로 채움
+    const profileRows = `
         <div class="cp-set-row">
             <label class="cp-set-label">연결 프로필 전환</label>
             <div class="cp-set-profile-wrap">
                 <select class="cp-set-select" id="cp-profile-select">
-                    <option value="">— 선택 —</option>
-                    ${profiles.map(p => `<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('')}
+                    <option value="">— 불러오는 중... —</option>
                 </select>
                 <button class="cp-set-btn-apply" id="cp-profile-apply">적용</button>
             </div>
             <p class="cp-set-hint">선택한 연결 프로필로 즉시 전환합니다.</p>
-        </div>` : `<p class="cp-set-hint">등록된 연결 프로필이 없어요. ST에서 프로필을 먼저 만들어 주세요.</p>`;
+        </div>`;
 
     return `
     <div class="cp-settings">
@@ -837,6 +834,15 @@ function bindSettingsPanelEvents(panel) {
         showToast('기본 탭이 변경됐어요');
     });
 
+    // ── 연결 프로필 select 실시간 채우기 ────────────────
+    const profileSel = panel.querySelector('#cp-profile-select');
+    if (profileSel) {
+        const profiles = getConnectionProfiles();
+        profileSel.innerHTML = profiles.length
+            ? profiles.map(p => `<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('')
+            : '<option value="">등록된 프로필이 없어요</option>';
+    }
+
     // ── 연결 프로필 적용 ─────────────────────────────────
     panel.querySelector('#cp-profile-apply')?.addEventListener('click', () => {
         const sel = panel.querySelector('#cp-profile-select');
@@ -848,9 +854,8 @@ function bindSettingsPanelEvents(panel) {
             if (typeof window.selectConnectionProfile === 'function') {
                 window.selectConnectionProfile(val);
             } else {
-                // 방법 2: 드롭다운 직접 조작
-                const $sel = $('#connection_profiles_list, #api_connection_profile');
-                $sel.val(val).trigger('change');
+                // 방법 2: 드롭다운 직접 조작 (레퍼런스와 동일)
+                $('#connection_profiles').val(val).trigger('change');
             }
             showToast(`✅ 프로필 "${sel.options[sel.selectedIndex]?.text}" 적용됨`);
         } catch(e) {
