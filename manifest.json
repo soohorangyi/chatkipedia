@@ -1,0 +1,11 @@
+{
+    "display_name": "챗키피디아",
+    "name": "chatpedia",
+    "version": "1.1.0",
+    "description": "RP 캐릭터 & 페르소나 백과사전. 캐릭터와 페르소나 정보를 체계적으로 저장하고 관리하세요. PC 및 Termux(모바일) 지원.",
+    "js": "index.js",
+    "css": "style.css",
+    "author": "your-username",
+    "homePage": "https://github.com/your-username/chatpedia",
+    "tags": ["utility", "characters", "personas", "rp"]
+}
