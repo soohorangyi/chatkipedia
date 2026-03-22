@@ -565,8 +565,11 @@ function setupTagInput(panel) {
         ).join('') + `<input class="cp-tag-text-input" id="cp-tag-input" type="text" placeholder="태그 입력 후 Enter">`;
         const inp = c.querySelector('#cp-tag-input');
         inp?.addEventListener('keydown', (e) => {
+            // IME 조합 중(한글 등)이면 무시 — 조합 완료 후 keydown이 다시 발생함
+            if (e.isComposing || e.keyCode === 229) return;
             if ((e.key==='Enter'||e.key===',') && inp.value.trim()) {
                 e.preventDefault();
+                e.stopPropagation();
                 const t = inp.value.trim().replace(/,/g,'');
                 if (t && !state.editTags.includes(t)) state.editTags.push(t);
                 inp.value=''; render(); c.querySelector('#cp-tag-input')?.focus();
