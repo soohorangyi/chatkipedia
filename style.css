@@ -7,7 +7,7 @@
    레퍼런스: vocab-helper style.css 패턴 준수
 ===================================================== */
 
-@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;600;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap');
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css');
 
 /* =====================================================
    모달 오버레이
@@ -15,22 +15,22 @@
 
 #chatpedia-overlay {
     /* 변수를 여기서 선언 — 이 요소와 모든 자식에만 적용 */
-    --cp-bg:        #1a1612;
-    --cp-surface:   #24201a;
-    --cp-surface2:  #2e2820;
-    --cp-border:    #4a3f2e;
-    --cp-border-lt: #5c4f3a;
-    --cp-gold:      #c9a84c;
-    --cp-gold-lt:   #e0c070;
-    --cp-gold-dim:  #7a6030;
-    --cp-text:      #e8dcc8;
-    --cp-text-dim:  #9a8a72;
-    --cp-text-mt:   #5a4e3e;
-    --cp-red:       #b85c5c;
-    --cp-char:      #c9a84c;
-    --cp-persona:   #7a9cb8;
-    --cp-custom:    #7a9c7a;
-    --cp-r:         6px;
+    --cp-bg:        #FFFFFF;
+    --cp-surface:   #F9FCFE;
+    --cp-surface2:  #EBF4F9;
+    --cp-border:    #C5DCE8;
+    --cp-border-lt: #D8EDF5;
+    --cp-gold:      #6B93B8;
+    --cp-gold-lt:   #A0C4D8;
+    --cp-gold-dim:  #4A7499;
+    --cp-text:      #2B3A4A;
+    --cp-text-dim:  #6B7F8F;
+    --cp-text-mt:   #9AAAB8;
+    --cp-red:       #C0675A;
+    --cp-char:      #6B93B8;
+    --cp-persona:   #A0C4D8;
+    --cp-custom:    #6A9E7A;
+    --cp-r:         8px;
 
     /* 레퍼런스와 동일한 방식: position fixed, inset 0, flex center */
     display: none;
@@ -40,11 +40,11 @@
     width: 100vw;
     height: 100vh;
     z-index: 10000;
-    background: rgba(0, 0, 0, 0.75);
+    background: rgba(43, 58, 74, 0.45);
     backdrop-filter: blur(3px);
     align-items: center;
     justify-content: center;
-    font-family: 'Noto Sans KR', sans-serif;
+    font-family: 'Pretendard', -apple-system, sans-serif;
     box-sizing: border-box;
     margin: 0;
     padding: 0;
@@ -69,7 +69,7 @@
     max-height: 700px;
     display: flex;
     flex-direction: column;
-    box-shadow: 0 8px 32px rgba(0,0,0,.6), inset 0 1px 0 rgba(201,168,76,.15);
+    box-shadow: 0 8px 32px rgba(0,0,0,.6), inset 0 1px 0 rgba(107,147,184,.15);
     animation: cp-slide .25s ease;
     overflow: hidden;
     position: relative;
@@ -78,7 +78,7 @@
     content: '';
     position: absolute;
     top: 0; left: 0; right: 0; height: 3px;
-    background: linear-gradient(90deg, transparent, #c9a84c, #e0c070, #c9a84c, transparent);
+    background: linear-gradient(90deg, transparent, #9DC4D8, #b8d8e8, #9DC4D8, transparent);
     pointer-events: none;
     z-index: 1;
 }
@@ -93,10 +93,10 @@
 }
 #chatpedia-modal .cp-title-block { display: flex; align-items: baseline; gap: 8px; }
 #chatpedia-modal .cp-title {
-    font-family: 'Noto Serif KR', serif;
+    font-family: 'Pretendard', -apple-system, sans-serif;
     font-size: 18px; font-weight: 700;
     color: var(--cp-gold);
-    text-shadow: 0 0 20px rgba(201,168,76,.3);
+    text-shadow: 0 0 20px rgba(107,147,184,.3);
 }
 #chatpedia-modal .cp-title-sub { font-size: 10px; color: var(--cp-text-mt); letter-spacing: .08em; text-transform: uppercase; }
 
@@ -131,14 +131,15 @@
     background: var(--cp-surface2); border-radius: 10px;
     padding: 1px 6px; font-size: 10px; font-weight: 700; color: var(--cp-text-mt);
 }
-#chatpedia-modal .cp-tab.active .cp-tab-count { background: rgba(201,168,76,.12); color: var(--cp-gold-dim); }
-#chatpedia-modal .cp-tab.active[data-tab="persona"] .cp-tab-count { background: rgba(122,156,184,.12); color: #5c7ab8; }
+#chatpedia-modal .cp-tab.active .cp-tab-count { background: rgba(107,147,184,.12); color: var(--cp-gold-dim); }
+#chatpedia-modal .cp-tab.active[data-tab="persona"] .cp-tab-count { background: rgba(157,196,216,.12); color: #6B93B8; }
 
 /* ── 툴바 ── */
 #chatpedia-modal .cp-toolbar {
     display: flex; gap: 8px; padding: 10px 18px;
     align-items: center; flex-shrink: 0;
     border-bottom: 1px solid var(--cp-border);
+    min-width: 0;
 }
 #chatpedia-modal .cp-search-wrap { flex: 1; position: relative; }
 #chatpedia-modal .cp-search-icon {
@@ -148,7 +149,7 @@
 #chatpedia-modal .cp-search {
     width: 100%; background: var(--cp-surface); border: 1px solid var(--cp-border);
     border-radius: var(--cp-r); padding: 7px 9px 7px 30px;
-    font-family: 'Noto Sans KR', sans-serif; font-size: 13px; color: var(--cp-text);
+    font-family: 'Pretendard', -apple-system, sans-serif; font-size: 13px; color: var(--cp-text);
     outline: none; box-sizing: border-box; transition: border-color .15s;
 }
 #chatpedia-modal .cp-search::placeholder { color: var(--cp-text-mt); }
@@ -157,18 +158,19 @@
 #chatpedia-modal .cp-tag-filter {
     background: var(--cp-surface); border: 1px solid var(--cp-border);
     border-radius: var(--cp-r); padding: 7px 9px;
-    font-family: 'Noto Sans KR', sans-serif; font-size: 12px; color: var(--cp-text);
-    outline: none; cursor: pointer; min-width: 100px; transition: border-color .15s;
+    font-family: 'Pretendard', -apple-system, sans-serif; font-size: 12px; color: var(--cp-text);
+    outline: none; cursor: pointer; width: 110px; flex-shrink: 0; transition: border-color .15s;
 }
-#chatpedia-modal .cp-tag-filter option { background: #24201a; }
+#chatpedia-modal .cp-tag-filter option { background: #FDFAF6; }
 #chatpedia-modal .cp-tag-filter:focus { border-color: var(--cp-gold-dim); }
 
 #chatpedia-modal .cp-btn-add {
-    background: linear-gradient(135deg, #7a6030, #c9a84c);
+    background: linear-gradient(135deg, #4A7499, #6B93B8);
     border: none; border-radius: var(--cp-r);
-    padding: 7px 13px; font-family: 'Noto Sans KR', sans-serif;
-    font-size: 12px; font-weight: 700; color: #1a1612;
+    padding: 7px 14px; font-family: 'Pretendard', -apple-system, sans-serif;
+    font-size: 12px; font-weight: 600; color: #FFFFFF;
     cursor: pointer; white-space: nowrap; transition: all .15s;
+    flex-shrink: 0;
 }
 #chatpedia-modal .cp-btn-add:hover { filter: brightness(1.1); transform: translateY(-1px); }
 
@@ -221,25 +223,25 @@
 }
 #chatpedia-modal .cp-btn-back:hover { background: var(--cp-surface2); color: var(--cp-text); }
 
-#chatpedia-modal .cp-view-name { font-family: 'Noto Serif KR', serif; font-size: 20px; font-weight: 700; color: var(--cp-text); }
+#chatpedia-modal .cp-view-name { font-family: 'Pretendard', -apple-system, sans-serif; font-size: 20px; font-weight: 700; color: var(--cp-text); }
 #chatpedia-modal .cp-view-type-badge {
     font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 10px;
     letter-spacing: .08em; text-transform: uppercase; margin-top: 3px; display: inline-block;
 }
-#chatpedia-modal .cp-view-type-badge.character { background: rgba(201,168,76,.1); color: var(--cp-char); border: 1px solid rgba(201,168,76,.3); }
-#chatpedia-modal .cp-view-type-badge.persona   { background: rgba(122,156,184,.1); color: var(--cp-persona); border: 1px solid rgba(122,156,184,.3); }
+#chatpedia-modal .cp-view-type-badge.character { background: rgba(107,147,184,.1); color: var(--cp-char); border: 1px solid rgba(107,147,184,.3); }
+#chatpedia-modal .cp-view-type-badge.persona   { background: rgba(157,196,216,.1); color: var(--cp-persona); border: 1px solid rgba(157,196,216,.3); }
 
 #chatpedia-modal .cp-view-actions { display: flex; gap: 7px; flex-shrink: 0; }
 #chatpedia-modal .cp-btn-edit,
 #chatpedia-modal .cp-btn-delete {
     padding: 5px 11px; border-radius: var(--cp-r);
-    font-family: 'Noto Sans KR', sans-serif; font-size: 12px;
+    font-family: 'Pretendard', -apple-system, sans-serif; font-size: 12px;
     cursor: pointer; transition: all .15s; border: 1px solid var(--cp-border);
 }
 #chatpedia-modal .cp-btn-edit   { background: var(--cp-surface2); color: var(--cp-text); }
 #chatpedia-modal .cp-btn-edit:hover   { border-color: var(--cp-gold-dim); color: var(--cp-gold); }
 #chatpedia-modal .cp-btn-delete { background: transparent; color: var(--cp-text-mt); }
-#chatpedia-modal .cp-btn-delete:hover { background: rgba(184,92,92,.1); border-color: #b85c5c; color: #b85c5c; }
+#chatpedia-modal .cp-btn-delete:hover { background: rgba(184,92,92,.1); border-color: #c47070; color: #c47070; }
 
 /* ── 필드 그리드 ── */
 #chatpedia-modal .cp-fields-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
@@ -248,7 +250,7 @@
 #chatpedia-modal .cp-field-label { font-size: 10px; font-weight: 700; color: var(--cp-gold-dim); letter-spacing: .1em; text-transform: uppercase; margin-bottom: 5px; display: flex; align-items: center; gap: 5px; }
 #chatpedia-modal .cp-field-value { font-size: 13px; color: var(--cp-text); line-height: 1.7; white-space: pre-wrap; word-break: break-word; }
 #chatpedia-modal .cp-field-value.empty { color: var(--cp-text-mt); font-style: italic; font-size: 12px; }
-#chatpedia-modal .cp-custom-badge { font-size: 9px; padding: 1px 5px; background: rgba(122,156,122,.15); color: var(--cp-custom); border: 1px solid rgba(122,156,122,.3); border-radius: 8px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; }
+#chatpedia-modal .cp-custom-badge { font-size: 9px; padding: 1px 5px; background: rgba(107,147,184,.15); color: var(--cp-custom); border: 1px solid rgba(107,147,184,.3); border-radius: 8px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; }
 
 /* ── 태그 ── */
 #chatpedia-modal .cp-tags-section { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-top: 4px; }
@@ -258,19 +260,19 @@
 /* ── 편집 모드 ── */
 #chatpedia-modal .cp-edit { padding: 18px 22px; }
 #chatpedia-modal .cp-edit-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--cp-border); }
-#chatpedia-modal .cp-edit-title  { font-family: 'Noto Serif KR', serif; font-size: 15px; font-weight: 600; color: var(--cp-gold); }
+#chatpedia-modal .cp-edit-title  { font-family: 'Pretendard', -apple-system, sans-serif; font-size: 15px; font-weight: 600; color: var(--cp-gold); }
 #chatpedia-modal .cp-edit-actions { display: flex; gap: 7px; }
 
 #chatpedia-modal .cp-btn-save {
-    padding: 6px 14px; background: linear-gradient(135deg, #7a6030, #c9a84c);
+    padding: 6px 14px; background: linear-gradient(135deg, #6B93B8, #9DC4D8);
     border: none; border-radius: var(--cp-r);
-    font-family: 'Noto Sans KR', sans-serif; font-size: 12px; font-weight: 700; color: #1a1612;
+    font-family: 'Pretendard', -apple-system, sans-serif; font-size: 12px; font-weight: 700; color: #1e2a35;
     cursor: pointer; transition: all .15s;
 }
 #chatpedia-modal .cp-btn-save:hover { filter: brightness(1.1); }
 #chatpedia-modal .cp-btn-cancel {
     padding: 6px 12px; background: var(--cp-surface2); border: 1px solid var(--cp-border);
-    border-radius: var(--cp-r); font-family: 'Noto Sans KR', sans-serif;
+    border-radius: var(--cp-r); font-family: 'Pretendard', -apple-system, sans-serif;
     font-size: 12px; color: var(--cp-text-dim); cursor: pointer; transition: all .15s;
 }
 #chatpedia-modal .cp-btn-cancel:hover { color: var(--cp-text); border-color: var(--cp-border-lt); }
@@ -286,7 +288,7 @@
 #chatpedia-modal .cp-form-select {
     background: var(--cp-surface); border: 1px solid var(--cp-border);
     border-radius: var(--cp-r); padding: 7px 9px;
-    font-family: 'Noto Sans KR', sans-serif; font-size: 13px; color: var(--cp-text);
+    font-family: 'Pretendard', -apple-system, sans-serif; font-size: 13px; color: var(--cp-text);
     outline: none; box-sizing: border-box; width: 100%; transition: border-color .15s;
 }
 #chatpedia-modal .cp-form-input:focus,
@@ -295,7 +297,7 @@
 #chatpedia-modal .cp-form-input::placeholder,
 #chatpedia-modal .cp-form-textarea::placeholder { color: var(--cp-text-mt); }
 #chatpedia-modal .cp-form-textarea { resize: vertical; min-height: 60px; line-height: 1.6; }
-#chatpedia-modal .cp-form-select option { background: #24201a; }
+#chatpedia-modal .cp-form-select option { background: #FDFAF6; }
 
 /* ── 커스텀 필드 ── */
 #chatpedia-modal .cp-custom-field-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
@@ -304,15 +306,15 @@
     border: 1px solid var(--cp-border); border-radius: 4px;
     color: var(--cp-text-mt); cursor: pointer; transition: all .15s;
 }
-#chatpedia-modal .cp-btn-remove-field:hover { background: rgba(184,92,92,.1); border-color: #b85c5c; color: #b85c5c; }
+#chatpedia-modal .cp-btn-remove-field:hover { background: rgba(184,92,92,.1); border-color: #c47070; color: #c47070; }
 
 #chatpedia-modal .cp-btn-add-field {
     width: 100%; padding: 8px; background: transparent;
     border: 1px dashed var(--cp-border); border-radius: var(--cp-r);
-    font-family: 'Noto Sans KR', sans-serif; font-size: 12px; font-weight: 500;
+    font-family: 'Pretendard', -apple-system, sans-serif; font-size: 12px; font-weight: 500;
     color: var(--cp-text-dim); cursor: pointer; transition: all .15s; text-align: center;
 }
-#chatpedia-modal .cp-btn-add-field:hover { border-color: var(--cp-gold-dim); color: var(--cp-gold); background: rgba(201,168,76,.05); }
+#chatpedia-modal .cp-btn-add-field:hover { border-color: var(--cp-gold-dim); color: var(--cp-gold); background: rgba(107,147,184,.05); }
 
 #chatpedia-modal .cp-add-field-form {
     background: var(--cp-surface2); border: 1px solid var(--cp-border);
@@ -323,15 +325,15 @@
 #chatpedia-modal .cp-add-field-actions { display: flex; gap: 7px; justify-content: flex-end; }
 
 #chatpedia-modal .cp-btn-confirm-field {
-    padding: 5px 13px; background: linear-gradient(135deg, #7a6030, #c9a84c);
+    padding: 5px 13px; background: linear-gradient(135deg, #6B93B8, #9DC4D8);
     border: none; border-radius: var(--cp-r);
-    font-family: 'Noto Sans KR', sans-serif; font-size: 12px; font-weight: 700;
-    color: #1a1612; cursor: pointer; transition: all .15s;
+    font-family: 'Pretendard', -apple-system, sans-serif; font-size: 12px; font-weight: 700;
+    color: #1e2a35; cursor: pointer; transition: all .15s;
 }
 #chatpedia-modal .cp-btn-confirm-field:hover { filter: brightness(1.1); }
 #chatpedia-modal .cp-btn-cancel-small {
     padding: 5px 11px; background: var(--cp-surface); border: 1px solid var(--cp-border);
-    border-radius: var(--cp-r); font-family: 'Noto Sans KR', sans-serif;
+    border-radius: var(--cp-r); font-family: 'Pretendard', -apple-system, sans-serif;
     font-size: 12px; color: var(--cp-text-dim); cursor: pointer; transition: all .15s;
 }
 #chatpedia-modal .cp-btn-cancel-small:hover { color: var(--cp-text); }
@@ -350,10 +352,10 @@
     border-radius: 10px; padding: 2px 7px; font-size: 11px; color: var(--cp-text-dim);
 }
 #chatpedia-modal .cp-form-tag-remove { cursor: pointer; color: var(--cp-text-mt); font-size: 11px; line-height: 1; transition: color .1s; }
-#chatpedia-modal .cp-form-tag-remove:hover { color: #b85c5c; }
+#chatpedia-modal .cp-form-tag-remove:hover { color: #c47070; }
 #chatpedia-modal .cp-tag-text-input {
     border: none; background: transparent; outline: none;
-    font-family: 'Noto Sans KR', sans-serif; font-size: 12px; color: var(--cp-text);
+    font-family: 'Pretendard', -apple-system, sans-serif; font-size: 12px; color: var(--cp-text);
     min-width: 80px; flex: 1;
 }
 #chatpedia-modal .cp-tag-text-input::placeholder { color: var(--cp-text-mt); }
@@ -402,13 +404,13 @@
 #chatpedia-trigger {
     position: fixed; bottom: 76px; right: 14px; z-index: 9999;
     width: 40px; height: 40px;
-    background: linear-gradient(135deg, #2a2318, #3a3020);
-    border: 1px solid #7a6030; border-radius: 50%;
+    background: linear-gradient(135deg, #1e2a35, #2d3e52);
+    border: 1px solid #6B93B8; border-radius: 50%;
     font-size: 18px; cursor: pointer;
     display: flex; align-items: center; justify-content: center;
     box-shadow: 0 4px 16px rgba(0,0,0,.5); transition: all .2s;
 }
-#chatpedia-trigger:hover { border-color: #c9a84c; box-shadow: 0 4px 20px rgba(201,168,76,.3); transform: translateY(-2px); }
+#chatpedia-trigger:hover { border-color: #9DC4D8; box-shadow: 0 4px 20px rgba(107,147,184,.3); transform: translateY(-2px); }
 
 /* =====================================================
    확인 다이얼로그 — 명시적 색상값 사용
@@ -419,17 +421,17 @@
     display: flex; align-items: center; justify-content: center;
 }
 .cp-confirm-box {
-    background: #2e2820; border: 1px solid #4a3f2e;
+    background: #EEE4D4; border: 1px solid #3d5470;
     border-radius: 8px; padding: 22px; max-width: 300px;
     text-align: center; box-shadow: 0 8px 32px rgba(0,0,0,.6);
-    font-family: 'Noto Sans KR', sans-serif;
+    font-family: 'Pretendard', -apple-system, sans-serif;
 }
-.cp-confirm-box p { color: #e8dcc8; font-size: 13px; margin: 0 0 16px; line-height: 1.6; }
+.cp-confirm-box p { color: #F0E0CC; font-size: 13px; margin: 0 0 16px; line-height: 1.6; }
 .cp-confirm-btns { display: flex; gap: 9px; justify-content: center; }
-.cp-confirm-yes { padding: 6px 16px; background: #b85c5c; border: none; border-radius: 6px; color: #fff; font-family: 'Noto Sans KR', sans-serif; font-size: 12px; font-weight: 700; cursor: pointer; }
+.cp-confirm-yes { padding: 6px 16px; background: #c47070; border: none; border-radius: 6px; color: #fff; font-family: 'Pretendard', -apple-system, sans-serif; font-size: 12px; font-weight: 700; cursor: pointer; }
 .cp-confirm-yes:hover { filter: brightness(1.15); }
-.cp-confirm-no  { padding: 6px 16px; background: #24201a; border: 1px solid #4a3f2e; border-radius: 6px; color: #9a8a72; font-family: 'Noto Sans KR', sans-serif; font-size: 12px; cursor: pointer; }
-.cp-confirm-no:hover { color: #e8dcc8; }
+.cp-confirm-no  { padding: 6px 16px; background: #FDFAF6; border: 1px solid #3d5470; border-radius: 6px; color: #B8AD96; font-family: 'Pretendard', -apple-system, sans-serif; font-size: 12px; cursor: pointer; }
+.cp-confirm-no:hover { color: #F0E0CC; }
 
 /* =====================================================
    토스트 — 명시적 색상값 사용
@@ -437,9 +439,9 @@
 .cp-toast {
     position: fixed; bottom: 20px; left: 50%;
     transform: translateX(-50%) translateY(16px);
-    background: #2e2820; border: 1px solid #4a3f2e; border-radius: 20px;
-    padding: 7px 16px; font-family: 'Noto Sans KR', sans-serif;
-    font-size: 12px; color: #e8dcc8;
+    background: #EEE4D4; border: 1px solid #3d5470; border-radius: 20px;
+    padding: 7px 16px; font-family: 'Pretendard', -apple-system, sans-serif;
+    font-size: 12px; color: #F0E0CC;
     z-index: 10200; opacity: 0; transition: all .3s;
     pointer-events: none; white-space: nowrap;
 }
@@ -449,15 +451,15 @@
    ⚙️ 설정 패널 — #chatpedia_ext_container 스코프
 ===================================================== */
 #chatpedia_ext_container .cp-settings {
-    font-family: 'Noto Sans KR', sans-serif;
+    font-family: 'Pretendard', -apple-system, sans-serif;
     padding: 4px 0 8px;
 }
 
 #chatpedia_ext_container .cp-set-section {
     margin-bottom: 14px;
     padding: 12px 14px;
-    background: rgba(255,255,255,0.03);
-    border: 1px solid rgba(255,255,255,0.08);
+    background: rgba(160,196,216,0.08);
+    border: 1px solid #D8EDF5;
     border-radius: 6px;
 }
 
@@ -465,9 +467,9 @@
     font-size: 12px; font-weight: 700;
     letter-spacing: .06em; margin-bottom: 10px;
     padding-bottom: 7px;
-    border-bottom: 1px solid rgba(255,255,255,0.08);
+    border-bottom: 1px solid #D8EDF5;
     /* ST 테마 색상 변수 사용 — 설정 패널은 ST UI 안에 있으므로 */
-    color: var(--SmartThemeQuoteColor, #89b4fa);
+    color: #4A7499;
 }
 
 #chatpedia_ext_container .cp-set-row { margin-bottom: 10px; }
@@ -490,19 +492,19 @@
 }
 
 #chatpedia_ext_container .cp-set-select {
-    background: rgba(255,255,255,0.05);
-    border: 1px solid var(--SmartThemeBorderColor, rgba(255,255,255,0.15));
+    background: rgba(249,252,254,0.95);
+    border: 1px solid #C5DCE8;
     border-radius: 5px; padding: 6px 9px;
-    font-family: 'Noto Sans KR', sans-serif; font-size: 12px;
+    font-family: 'Pretendard', -apple-system, sans-serif; font-size: 12px;
     outline: none; cursor: pointer; width: 100%; transition: border-color .15s;
     color: var(--SmartThemeBodyColor, inherit);
 }
 
 #chatpedia_ext_container .cp-set-btn {
     padding: 6px 13px;
-    background: rgba(255,255,255,0.06);
-    border: 1px solid var(--SmartThemeBorderColor, rgba(255,255,255,0.15));
-    border-radius: 5px; font-family: 'Noto Sans KR', sans-serif;
+    background: rgba(160,196,216,0.1);
+    border: 1px solid #C5DCE8;
+    border-radius: 5px; font-family: 'Pretendard', -apple-system, sans-serif;
     font-size: 12px; cursor: pointer; transition: all .15s;
     color: var(--SmartThemeBodyColor, inherit);
 }
@@ -510,7 +512,7 @@
 
 #chatpedia_ext_container .cp-set-btn-danger {
     border-color: rgba(184,92,92,.5) !important;
-    color: #b85c5c !important;
+    color: #c47070 !important;
 }
 #chatpedia_ext_container .cp-set-btn-danger:hover { background: rgba(184,92,92,.12) !important; }
 
@@ -520,10 +522,10 @@
 #chatpedia_ext_container .cp-set-profile-wrap .cp-set-select { flex: 1; }
 #chatpedia_ext_container .cp-set-btn-apply {
     padding: 6px 12px;
-    background: linear-gradient(135deg, #7a6030, #c9a84c);
+    background: linear-gradient(135deg, #6B93B8, #9DC4D8);
     border: none; border-radius: 5px;
-    font-family: 'Noto Sans KR', sans-serif;
-    font-size: 12px; font-weight: 700; color: #1a1612;
+    font-family: 'Pretendard', -apple-system, sans-serif;
+    font-size: 12px; font-weight: 700; color: #1e2a35;
     cursor: pointer; white-space: nowrap; transition: all .15s; flex-shrink: 0;
 }
 #chatpedia_ext_container .cp-set-btn-apply:hover { filter: brightness(1.1); }
@@ -539,22 +541,22 @@
 #chatpedia_ext_container .cp-toggle input { position: absolute; opacity: 0; width: 0; height: 0; }
 #chatpedia_ext_container .cp-toggle-track {
     width: 36px; height: 20px;
-    background: rgba(255,255,255,0.08);
-    border: 1px solid rgba(255,255,255,0.15);
+    background: #EBF4F9;
+    border: 1px solid #C5DCE8;
     border-radius: 10px; transition: all .2s; position: relative;
 }
 #chatpedia_ext_container .cp-toggle-thumb {
     position: absolute; top: 2px; left: 2px;
     width: 14px; height: 14px;
-    background: rgba(255,255,255,0.3);
+    background: #9AAAB8;
     border-radius: 50%; transition: all .2s;
 }
 #chatpedia_ext_container .cp-toggle input:checked ~ .cp-toggle-track {
-    background: rgba(201,168,76,.25);
-    border-color: #7a6030;
+    background: rgba(107,147,184,.25);
+    border-color: #6B93B8;
 }
 #chatpedia_ext_container .cp-toggle input:checked ~ .cp-toggle-track .cp-toggle-thumb {
-    left: 18px; background: #c9a84c;
+    left: 18px; background: #9DC4D8;
 }
 
 #chatpedia_ext_container .cp-set-import-wrap { display: flex; gap: 7px; align-items: center; }
