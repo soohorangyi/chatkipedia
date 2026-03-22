@@ -765,8 +765,9 @@ function buildSettingsPanelHTML() {
             <div class="cp-set-row">
                 <label class="cp-set-label">가져오기 (Import)</label>
                 <div class="cp-set-import-wrap">
-                    <input type="file" id="cp-import-file" accept=".json" style="display:none">
-                    <button class="cp-set-btn" id="cp-import-btn">⬆️ JSON 불러오기</button>
+                    <input type="file" id="cp-import-file" accept=".json"
+                        style="position:absolute;opacity:0;width:1px;height:1px;pointer-events:none;">
+                    <label for="cp-import-file" class="cp-set-btn" style="cursor:pointer;display:inline-block;">⬆️ JSON 불러오기</label>
                 </div>
                 <p class="cp-set-hint">기존 데이터에 <b>병합</b>됩니다. 같은 ID는 덮어씌워져요.</p>
             </div>
@@ -814,7 +815,7 @@ function bindSettingsPanelEvents(panel) {
 
     // 가져오기
     const importFile = panel.querySelector('#cp-import-file');
-    panel.querySelector('#cp-import-btn')?.addEventListener('click', () => importFile?.click());
+    // import는 label[for=cp-import-file]이 직접 처리
     importFile?.addEventListener('change', e => {
         const file = e.target.files[0];
         if (!file) return;
