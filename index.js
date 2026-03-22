@@ -1087,9 +1087,23 @@ function buildSettingsPanel() {
             </div>
         </div>`;
 
-    $('#extensions_settings').append(html);
-    const panel = document.getElementById('chatpedia-settings-panel');
-    if (panel) bindSettingsPanelEvents(panel);
+    // #extensions_settings가 아직 없으면 MutationObserver로 대기
+    const tryInject = () => {
+        const target = document.getElementById('extensions_settings');
+        if (!target) return false;
+        if (document.getElementById('chatpedia-settings-panel')) return true;
+        $(target).append(html);
+        const panel = document.getElementById('chatpedia-settings-panel');
+        if (panel) bindSettingsPanelEvents(panel);
+        return true;
+    };
+
+    if (!tryInject()) {
+        const obs = new MutationObserver(() => {
+            if (tryInject()) obs.disconnect();
+        });
+        obs.observe(document.body, { childList: true, subtree: true });
+    }
 }
 
 // ============================================================
@@ -1097,11 +1111,25 @@ function buildSettingsPanel() {
 // ============================================================
 
 function registerWandButton() {
-    const $btn = $(`<div id="chatpedia-wand-btn" class="list-group-item flex-container flexGap5" title="챗키피디아 열기">
-        <span>📚</span><span>챗키피디아</span>
-    </div>`);
-    $btn.on('click', openModal);
-    $('#extensionsMenu').append($btn);
+    // #extensionsMenu가 없으면 MutationObserver로 대기
+    const tryInject = () => {
+        if (document.getElementById('chatpedia-wand-btn')) return true;
+        const menu = document.getElementById('extensionsMenu');
+        if (!menu) return false;
+        const $btn = $(`<div id="chatpedia-wand-btn" class="list-group-item flex-container flexGap5" title="챗키피디아 열기">
+            <span>📚</span><span>챗키피디아</span>
+        </div>`);
+        $btn.on('click', openModal);
+        $(menu).append($btn);
+        return true;
+    };
+
+    if (!tryInject()) {
+        const obs = new MutationObserver(() => {
+            if (tryInject()) obs.disconnect();
+        });
+        obs.observe(document.body, { childList: true, subtree: true });
+    }
 }
 
 // ============================================================
