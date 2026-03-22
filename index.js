@@ -763,6 +763,89 @@ function bindSettingsPanelEvents(panel) {
             try {
                 const data = JSON.parse(ev.target.result);
 
+                // ── ST 로어북 형식 감지 ──
+                // 구조: { entries: { "0": { comment, content }, "1": {...} } }
+                const isLorebook = data.entries && typeof data.entries === 'object'
+                    && !Array.isArray(data.entries)
+                    && Object.values(data.entries).some(e => e && e.content !== undefined);
+
+                if (isLorebook) {
+                    // 로어북 파일명에서 캐릭터 이름 추출 (파일명 = "Christine.json" → "Christine")
+                    const lorebookName = file.name.replace(/\.json$/i, '');
+
+                    // entries를 comment → content 매핑으로 변환
+                    const lorebookEntries = Object.values(data.entries)
+                        .filter(e => e && e.content && String(e.content).trim())
+                        .sort((a, b) => (Number(b.order ?? b.displayIndex ?? 0)) - (Number(a.order ?? a.displayIndex ?? 0)));
+
+                    if (lorebookEntries.length === 0) {
+                        throw new Error('로어북에 내용이 있는 항목이 없어요.');
+                    }
+
+                    // 각 로어북 항목 → 커스텀 필드로 저장
+                    // 첫 번째 항목의 comment에서 이름을 추출하거나 파일명 사용
+                    const customFieldsFromLorebook = lorebookEntries.map((e, i) => {
+                        const label = String(e.comment || `항목 ${i + 1}`).trim();
+                        // 커스텀 필드 key: 안전한 영숫자+한글 조합
+                        const key = 'lb_' + label
+                            .replace(/[^\w가-힣]/g, '_')
+                            .toLowerCase()
+                            .slice(0, 30)
+                            + '_' + i;
+                        return {
+                            key,
+                            label,
+                            type: 'textarea',
+                            placeholder: '',
+                            full: true,
+                            rows: 4,
+                            _fromLorebook: true,
+                        };
+                    });
+
+                    // 챗키피디아 항목 생성 — 기본 필드는 비우고 커스텀 필드만
+                    const lbEntry = {
+                        id:          genId(),
+                        type:        state.activeTab,  // 현재 열린 탭(캐릭터/페르소나)으로
+                        createdAt:   Date.now(),
+                        name:        lorebookName,
+                        // 기본 필드 전부 빈 값
+                        age: '', gender: '', orientation: '', nationality: '',
+                        job: '', family: '', appearance: '', personality: '',
+                        speech: '', background: '', extra: '',
+                        tags: [],
+                    };
+
+                    // 커스텀 필드 값을 entry에 직접 저장
+                    lorebookEntries.forEach((e, i) => {
+                        lbEntry[customFieldsFromLorebook[i].key] = String(e.content).trim();
+                    });
+
+                    // 커스텀 필드 전역 등록 (중복 key 방지)
+                    const existingCF = getCustomFields();
+                    const existingKeys = new Set(existingCF.map(f => f.key));
+                    const newCF = customFieldsFromLorebook
+                        .map(({ _fromLorebook, ...f }) => f)
+                        .filter(f => !existingKeys.has(f.key));
+                    saveCustomFields([...existingCF, ...newCF]);
+
+                    // 항목 저장
+                    const existMap = Object.fromEntries(getEntries().map(e => [e.id, e]));
+                    existMap[lbEntry.id] = lbEntry;
+                    saveEntries(Object.values(existMap));
+
+                    showToast(`✅ 로어북 "${lorebookName}" — ${lorebookEntries.length}개 항목으로 가져왔어요!`);
+                    const p = document.getElementById('chatpedia-settings-panel');
+                    if (p) { p.innerHTML = buildSettingsPanelHTML(); bindSettingsPanelEvents(p); }
+                    const overlay = document.getElementById('chatpedia-overlay');
+                    if (overlay?.classList.contains('active')) {
+                        state.selectedId = lbEntry.id;
+                        renderAll();
+                    }
+                    importFile.value = '';
+                    return;
+                }
+
                 // ── ST 캐릭터 카드 형식 감지 (chara_card_v2 / v3) ──
                 // 구조: { name, description, personality, spec: "chara_card_v3", ... }
                 const isCharaCard = data.spec && String(data.spec).startsWith('chara_card');
