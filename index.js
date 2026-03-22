@@ -763,16 +763,64 @@ function bindSettingsPanelEvents(panel) {
             try {
                 const data = JSON.parse(ev.target.result);
 
-                // ── 배열 형태 추출 (다양한 JSON 구조 대응) ──
+                // ── ST 페르소나 JSON 형식 감지 ──
+                // 구조: { personas: {"파일명":"이름"}, persona_descriptions: {"파일명":{description,...}} }
+                if (data.personas && data.persona_descriptions) {
+                    const personas_map    = data.personas;            // { 파일명: 표시이름 }
+                    const descriptions    = data.persona_descriptions; // { 파일명: { description, title, ... } }
+                    const incoming_st = Object.keys(personas_map).map(fileKey => {
+                        const displayName = personas_map[fileKey] || fileKey;
+                        const desc        = descriptions[fileKey] || {};
+                        const descText    = (desc.description || '').trim();
+
+                        return {
+                            id:          genId(),
+                            type:        'persona',
+                            createdAt:   Date.now(),
+                            name:        displayName,
+                            // description 전체를 '배경 스토리' 필드에 넣기
+                            background:  descText,
+                            // title이 있으면 '기타 설정'에 기록
+                            extra:       desc.title ? `버전/제목: ${desc.title}` : '',
+                            // connections 정보를 family 필드에 연결 캐릭터 목록으로
+                            family:      (desc.connections || []).length > 0
+                                ? `연결 캐릭터: ${desc.connections.map(c => c.id.replace('.png','')).join(', ')}`
+                                : '',
+                            tags:        desc.lorebook ? [desc.lorebook] : [],
+                            appearance:  '',
+                            personality: '',
+                            speech:      '',
+                            age:         '',
+                            gender:      '',
+                            orientation: '',
+                            nationality: '',
+                            job:         '',
+                        };
+                    });
+
+                    // 이름 없거나 빈 description인 항목도 포함 (이름만이라도)
+                    const existMap = Object.fromEntries(getEntries().map(e => [e.id, e]));
+                    incoming_st.forEach(e => { existMap[e.id] = e; });
+                    saveEntries(Object.values(existMap));
+
+                    showToast(`✅ ST 페르소나 ${incoming_st.length}개 가져오기 완료!`);
+                    const p = document.getElementById('chatpedia-settings-panel');
+                    if (p) { p.innerHTML = buildSettingsPanelHTML(); bindSettingsPanelEvents(p); }
+                    const overlay = document.getElementById('chatpedia-overlay');
+                    if (overlay?.classList.contains('active')) renderAll();
+                    importFile.value = '';
+                    return; // 일반 처리 건너뜀
+                }
+
+                // ── 배열 형태 추출 (일반 JSON 구조 대응) ──
                 let incoming = null;
                 if (Array.isArray(data))                   incoming = data;
                 else if (Array.isArray(data.entries))      incoming = data.entries;
-                else if (Array.isArray(data.personas))     incoming = data.personas;
                 else if (Array.isArray(data.characters))   incoming = data.characters;
+                else if (Array.isArray(data.personas))     incoming = data.personas;
                 else if (Array.isArray(data.data))         incoming = data.data;
                 else if (Array.isArray(data.items))        incoming = data.items;
                 else {
-                    // 객체의 값들이 모두 객체면 배열로 변환 시도
                     const vals = Object.values(data).filter(v => v && typeof v === 'object' && !Array.isArray(v));
                     if (vals.length > 0) incoming = vals;
                 }
@@ -781,7 +829,6 @@ function bindSettingsPanelEvents(panel) {
                 }
 
                 // ── 각 항목 정규화 ──
-                // 챗키피디아 필드 → JSON에서 가능한 키 이름 목록
                 const FIELD_MAP = {
                     name:        ['name','이름','名前','nombre','nom'],
                     age:         ['age','나이','年齢'],
@@ -805,11 +852,9 @@ function bindSettingsPanelEvents(panel) {
 
                 const activeTab = state.activeTab;
                 const normalized = incoming.map((item, idx) => {
-                    // 이미 챗키피디아 형식이면 그대로 사용
                     const isChatpedia = item.id && (item.type === 'character' || item.type === 'persona');
                     if (isChatpedia) return { ...item };
 
-                    // 외부 JSON → 필드 매핑
                     const mapped = {
                         id:   item.id || genId(),
                         type: item.type || activeTab,
@@ -819,7 +864,6 @@ function bindSettingsPanelEvents(panel) {
                     for (const [field, keys] of Object.entries(FIELD_MAP)) {
                         mapped[field] = pickField(item, keys);
                     }
-                    // name이 여전히 없으면 첫 번째 문자열 값 또는 인덱스 사용
                     if (!mapped.name) {
                         const firstStr = Object.values(item).find(v => typeof v === 'string' && v.trim());
                         mapped.name = firstStr || `항목 ${idx + 1}`;
