@@ -7,6 +7,10 @@
 import { saveSettingsDebounced } from '../../../../script.js';
 import { extension_settings } from '../../../extensions.js';
 
+function getSTContext() {
+    return window.SillyTavern?.getContext() || {};
+}
+
 const EXT_NAME = 'chatpedia';
 
 // ── 기본 필드 정의 (고정) ─────────────────────────────────
@@ -556,6 +560,113 @@ function toggleMobileView(show) {
 // 유틸 UI
 // ============================================================
 
+// ============================================================
+// AI 자동 필드 분류 (ST generateRaw 사용)
+// ============================================================
+
+/**
+ * description 텍스트를 현재 연결된 ST 모델로 분석해
+ * 챗키피디아 필드에 맞게 JSON으로 반환
+ */
+async function classifyDescriptionWithAI(name, description) {
+    const ctx = getSTContext();
+    const { generateRaw } = ctx;
+    if (typeof generateRaw !== 'function') {
+        throw new Error('ST API를 사용할 수 없어요. 모델이 연결되어 있는지 확인해 주세요.');
+    }
+
+    const prompt = `다음은 "${name}"이라는 캐릭터/페르소나의 설명 텍스트야.
+이 텍스트를 분석해서 아래 JSON 형식으로만 답해줘. JSON 외에 다른 말은 절대 하지 마.
+값이 없거나 불분명하면 빈 문자열("")로 남겨.
+
+{
+  "age": "나이 (숫자+단위, 예: 17세)",
+  "gender": "성별",
+  "orientation": "성적 지향",
+  "nationality": "국적 또는 출신지",
+  "job": "직업 또는 신분",
+  "family": "가족관계",
+  "appearance": "외모 묘사",
+  "personality": "성격",
+  "speech": "말투나 말버릇",
+  "background": "배경 스토리와 설정"
+}
+
+--- 분석할 텍스트 ---
+${description}
+--- 끝 ---`;
+
+    // vocab-helper와 동일한 방식으로 generateRaw 호출
+    const savedChat = ctx.chat ? [...ctx.chat] : null;
+    if (savedChat) ctx.chat.length = 0;
+
+    let raw = '';
+    try {
+        raw = await generateRaw({ prompt, quietToLoud: false, skipWIAN: true });
+    } finally {
+        if (savedChat) {
+            ctx.chat.length = 0;
+            savedChat.forEach(m => ctx.chat.push(m));
+        }
+    }
+
+    if (!raw?.trim()) throw new Error('빈 응답');
+
+    // JSON 파싱 — 코드블록 제거 후 시도
+    const clean = raw.replace(/```json|```/gi, '').trim();
+    const jsonMatch = clean.match(/\{[\s\S]+\}/);
+    if (!jsonMatch) throw new Error('JSON을 찾을 수 없어요');
+
+    return JSON.parse(jsonMatch[0]);
+}
+
+/**
+ * ST 페르소나 배열을 AI로 분류
+ * progress 콜백: (done, total, name) => void
+ */
+async function classifyPersonasWithAI(personas, onProgress) {
+    const results = [];
+    for (let i = 0; i < personas.length; i++) {
+        const p = personas[i];
+        onProgress?.(i, personas.length, p.name);
+
+        if (!p._rawDescription) {
+            // description 없으면 AI 분류 불필요
+            results.push(p);
+            continue;
+        }
+        try {
+            const fields = await classifyDescriptionWithAI(p.name, p._rawDescription);
+            results.push({
+                ...p,
+                age:         fields.age         || '',
+                gender:      fields.gender       || '',
+                orientation: fields.orientation  || '',
+                nationality: fields.nationality  || '',
+                job:         fields.job          || '',
+                family:      fields.family       || (p.family || ''),
+                appearance:  fields.appearance   || '',
+                personality: fields.personality  || '',
+                speech:      fields.speech       || '',
+                background:  fields.background   || p._rawDescription,
+                // 원문 보존 (fallback용)
+                _rawDescription: p._rawDescription,
+            });
+        } catch (err) {
+            console.warn(`[챗키피디아] AI 분류 실패 (${p.name}):`, err.message);
+            // 실패 시 원문 그대로 background에 보존
+            results.push({
+                ...p,
+                background: p._rawDescription,
+                _aiError: err.message,
+            });
+        }
+    }
+    onProgress?.(personas.length, personas.length, '');
+    return results;
+}
+
+
 function showConfirm(msg, onYes) {
     const o = document.createElement('div');
     o.className = 'cp-confirm-overlay';
@@ -764,52 +875,92 @@ function bindSettingsPanelEvents(panel) {
                 const data = JSON.parse(ev.target.result);
 
                 // ── ST 페르소나 JSON 형식 감지 ──
-                // 구조: { personas: {"파일명":"이름"}, persona_descriptions: {"파일명":{description,...}} }
                 if (data.personas && data.persona_descriptions) {
-                    const personas_map    = data.personas;            // { 파일명: 표시이름 }
-                    const descriptions    = data.persona_descriptions; // { 파일명: { description, title, ... } }
+                    const personas_map = data.personas;
+                    const descriptions = data.persona_descriptions;
+
+                    // 1단계: 기본 구조 생성 (_rawDescription에 원문 보존)
                     const incoming_st = Object.keys(personas_map).map(fileKey => {
                         const displayName = personas_map[fileKey] || fileKey;
                         const desc        = descriptions[fileKey] || {};
                         const descText    = (desc.description || '').trim();
-
                         return {
-                            id:          genId(),
-                            type:        'persona',
-                            createdAt:   Date.now(),
-                            name:        displayName,
-                            // description 전체를 '배경 스토리' 필드에 넣기
-                            background:  descText,
-                            // title이 있으면 '기타 설정'에 기록
-                            extra:       desc.title ? `버전/제목: ${desc.title}` : '',
-                            // connections 정보를 family 필드에 연결 캐릭터 목록으로
-                            family:      (desc.connections || []).length > 0
-                                ? `연결 캐릭터: ${desc.connections.map(c => c.id.replace('.png','')).join(', ')}`
+                            id:              genId(),
+                            type:            'persona',
+                            createdAt:       Date.now(),
+                            name:            displayName,
+                            // AI 분류 전까지 원문을 background에 보존
+                            background:      descText,
+                            extra:           desc.title ? \`버전/제목: \${desc.title}\` : '',
+                            family:          (desc.connections || []).length > 0
+                                ? \`연결 캐릭터: \${desc.connections.map(c => c.id.replace('.png','')).join(', ')}\`
                                 : '',
-                            tags:        desc.lorebook ? [desc.lorebook] : [],
-                            appearance:  '',
-                            personality: '',
-                            speech:      '',
-                            age:         '',
-                            gender:      '',
-                            orientation: '',
-                            nationality: '',
-                            job:         '',
+                            tags:            desc.lorebook ? [desc.lorebook] : [],
+                            age: '', gender: '', orientation: '', nationality: '',
+                            job: '', appearance: '', personality: '', speech: '',
+                            // 원문 보존 (AI 분류용, 저장은 하지 않음)
+                            _rawDescription: descText,
                         };
                     });
 
-                    // 이름 없거나 빈 description인 항목도 포함 (이름만이라도)
+                    // 2단계: 일단 원문 상태로 먼저 저장 (즉시 열람 가능)
                     const existMap = Object.fromEntries(getEntries().map(e => [e.id, e]));
                     incoming_st.forEach(e => { existMap[e.id] = e; });
                     saveEntries(Object.values(existMap));
 
-                    showToast(`✅ ST 페르소나 ${incoming_st.length}개 가져오기 완료!`);
-                    const p = document.getElementById('chatpedia-settings-panel');
-                    if (p) { p.innerHTML = buildSettingsPanelHTML(); bindSettingsPanelEvents(p); }
                     const overlay = document.getElementById('chatpedia-overlay');
                     if (overlay?.classList.contains('active')) renderAll();
+
+                    // description이 있는 항목만 AI 분류 대상
+                    const toClassify = incoming_st.filter(e => e._rawDescription);
+                    const skipCount  = incoming_st.length - toClassify.length;
+
+                    if (toClassify.length === 0) {
+                        showToast(\`✅ \${incoming_st.length}개 가져오기 완료! (내용 없음)\`);
+                        const p = document.getElementById('chatpedia-settings-panel');
+                        if (p) { p.innerHTML = buildSettingsPanelHTML(); bindSettingsPanelEvents(p); }
+                        importFile.value = '';
+                        return;
+                    }
+
+                    // 3단계: AI 분류 진행 — 진행 토스트 표시
+                    showToast(\`🤖 AI 분류 시작... (0/\${toClassify.length})\`);
+
+                    classifyPersonasWithAI(toClassify, (done, total, name) => {
+                        if (done < total && name) {
+                            showToast(\`🤖 분류 중... (\${done+1}/\${total}) \${name}\`);
+                        }
+                    }).then(classified => {
+                        // 4단계: AI 분류 결과로 기존 항목 덮어쓰기
+                        const currentEntries = getEntries();
+                        classified.forEach(classified_entry => {
+                            const idx = currentEntries.findIndex(e => e.id === classified_entry.id);
+                            if (idx !== -1) {
+                                // _rawDescription은 저장하지 않음
+                                const { _rawDescription, _aiError, ...toSave } = classified_entry;
+                                currentEntries[idx] = toSave;
+                            }
+                        });
+                        saveEntries(currentEntries);
+
+                        const failCount = classified.filter(e => e._aiError).length;
+                        const okCount   = classified.length - failCount;
+                        let msg = \`✅ AI 분류 완료! \${okCount}개 성공\`;
+                        if (failCount > 0) msg += \`, \${failCount}개는 원문 보존\`;
+                        if (skipCount  > 0) msg += \` (\${skipCount}개 내용 없음)\`;
+                        showToast(msg);
+
+                        const p = document.getElementById('chatpedia-settings-panel');
+                        if (p) { p.innerHTML = buildSettingsPanelHTML(); bindSettingsPanelEvents(p); }
+                        if (overlay?.classList.contains('active')) renderAll();
+                    }).catch(err => {
+                        showToast(\`❌ AI 분류 실패: \${err.message}\`);
+                        console.error('[챗키피디아] AI classify error:', err);
+                    });
+
+                    showToast(\`📥 \${incoming_st.length}개 불러옴, AI 분류 중...\`);
                     importFile.value = '';
-                    return; // 일반 처리 건너뜀
+                    return;
                 }
 
                 // ── 배열 형태 추출 (일반 JSON 구조 대응) ──
