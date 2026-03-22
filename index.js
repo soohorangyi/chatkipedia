@@ -656,63 +656,6 @@ function buildModal() {
 }
 
 // ── 마법봉(wand) 메뉴 등록 ───────────────────────────────
-function registerWandButton() {
-    // 레퍼런스와 동일한 방식
-    const $btn = $(`<div id="chatpedia-wand-btn" class="list-group-item flex-container flexGap5" title="챗키피디아 열기">
-        <span>📚</span><span>챗키피디아</span>
-    </div>`);
-    $btn.on('click', openModal);
-    $('#extensionsMenu').append($btn);
-}
-
-
-
-
-// ============================================================
-// 설정 패널 (Extensions 탭 토글 내부)
-// ============================================================
-
-function refreshSettingsPanel() {
-    const panel = document.getElementById('chatpedia-settings-panel');
-    if (!panel) return;
-    panel.innerHTML = buildSettingsPanelHTML();
-    bindSettingsPanelEvents(panel);
-}
-
-function buildSettingsPanel() {
-    if (document.getElementById('chatpedia-settings-panel')) return;
-
-    const html = `
-        <div id="chatpedia_ext_container">
-            <div class="inline-drawer">
-                <div class="inline-drawer-toggle inline-drawer-header" id="chatpedia-drawer-toggle">
-                    <b>📚 챗키피디아</b>
-                    <div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div>
-                </div>
-                <div class="inline-drawer-content">
-                    <div id="chatpedia-settings-panel">
-                        ${buildSettingsPanelHTML()}
-                    </div>
-                </div>
-            </div>
-        </div>`;
-
-    $('#extensions_settings').append(html);
-    const panel = document.getElementById('chatpedia-settings-panel');
-    if (panel) bindSettingsPanelEvents(panel);
-
-    // 토글 열릴 때마다 ST 데이터 새로 읽어서 갱신
-    document.getElementById('chatpedia-drawer-toggle')?.addEventListener('click', () => {
-        // inline-drawer가 열리는 방향일 때만 (닫힐 때는 불필요)
-        const content = document.querySelector('#chatpedia_ext_container .inline-drawer-content');
-        const isOpening = content && getComputedStyle(content).display === 'none';
-        if (isOpening) {
-            // 약간의 딜레이 후 갱신 (ST 애니메이션 완료 후)
-            setTimeout(refreshSettingsPanel, 80);
-        }
-    });
-}
-
 function buildSettingsPanelHTML() {
     const s = getSettings();
     return `
@@ -811,21 +754,58 @@ function bindSettingsPanelEvents(panel) {
         reader.onload = ev => {
             try {
                 const data = JSON.parse(ev.target.result);
-                const incoming = data.entries || data;
-                if (!Array.isArray(incoming)) throw new Error('올바른 형식이 아니에요');
+
+                // ── 배열 형태 추출 (다양한 JSON 구조 대응) ──
+                let incoming = null;
+                if (Array.isArray(data))               incoming = data;           // 최상위가 배열
+                else if (Array.isArray(data.entries))  incoming = data.entries;   // { entries: [...] }
+                else if (Array.isArray(data.personas)) incoming = data.personas;  // { personas: [...] }
+                else if (Array.isArray(data.data))     incoming = data.data;      // { data: [...] }
+                else {
+                    // 객체의 값들이 배열 요소일 수도 있음 — 객체면 values로 변환 시도
+                    const vals = Object.values(data);
+                    if (vals.length && typeof vals[0] === 'object' && !Array.isArray(vals[0])) {
+                        incoming = vals;
+                    }
+                }
+                if (!incoming || !Array.isArray(incoming)) {
+                    throw new Error('배열 데이터를 찾을 수 없어요. JSON 구조를 확인해 주세요.');
+                }
+
+                // ── 각 항목 정규화 (id, type 없으면 자동 생성) ──
+                const now = Date.now();
+                const activeTab = state.activeTab; // 현재 탭을 기본 type으로 사용
+                const normalized = incoming.map((item, idx) => ({
+                    ...item,
+                    id:   item.id   || genId(),
+                    type: item.type || activeTab,   // type 없으면 현재 탭으로
+                    name: item.name || item.이름 || item.title || `항목 ${idx + 1}`,
+                }));
+
+                // ── 기존 데이터에 병합 (id 기준) ──
                 const existMap = Object.fromEntries(getEntries().map(e => [e.id, e]));
-                incoming.forEach(e => { existMap[e.id] = e; });
+                normalized.forEach(e => { existMap[e.id] = e; });
                 saveEntries(Object.values(existMap));
+
+                // ── 커스텀 필드도 병합 ──
                 if (Array.isArray(data.customFields)) {
                     const cfMap = Object.fromEntries(getCustomFields().map(f => [f.key, f]));
                     data.customFields.forEach(f => { cfMap[f.key] = f; });
                     saveCustomFields(Object.values(cfMap));
                 }
-                showToast(`✅ ${incoming.length}개 항목 가져오기 완료!`);
+
+                showToast(`✅ ${normalized.length}개 항목 가져오기 완료!`);
+
+                // ── UI 갱신 ──
                 const p = document.getElementById('chatpedia-settings-panel');
                 if (p) { p.innerHTML = buildSettingsPanelHTML(); bindSettingsPanelEvents(p); }
+                // 모달이 열려 있으면 목록도 즉시 갱신
+                const overlay = document.getElementById('chatpedia-overlay');
+                if (overlay?.classList.contains('active')) renderAll();
+
             } catch(err) {
                 showToast(`❌ 가져오기 실패: ${err.message}`);
+                console.error('[챗키피디아] import error:', err);
             }
             importFile.value = '';
         };
@@ -845,3 +825,57 @@ function bindSettingsPanelEvents(panel) {
     });
 }
 
+// ============================================================
+// 설정 패널 주입
+// ============================================================
+
+function buildSettingsPanel() {
+    if (document.getElementById('chatpedia-settings-panel')) return;
+
+    const html = `
+        <div id="chatpedia_ext_container">
+            <div class="inline-drawer">
+                <div class="inline-drawer-toggle inline-drawer-header">
+                    <b>📚 챗키피디아</b>
+                    <div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div>
+                </div>
+                <div class="inline-drawer-content">
+                    <div id="chatpedia-settings-panel">
+                        ${buildSettingsPanelHTML()}
+                    </div>
+                </div>
+            </div>
+        </div>`;
+
+    $('#extensions_settings').append(html);
+    const panel = document.getElementById('chatpedia-settings-panel');
+    if (panel) bindSettingsPanelEvents(panel);
+}
+
+// ============================================================
+// 마법봉(wand) 메뉴 등록
+// ============================================================
+
+function registerWandButton() {
+    const $btn = $(`<div id="chatpedia-wand-btn" class="list-group-item flex-container flexGap5" title="챗키피디아 열기">
+        <span>📚</span><span>챗키피디아</span>
+    </div>`);
+    $btn.on('click', openModal);
+    $('#extensionsMenu').append($btn);
+}
+
+// ============================================================
+// 진입점
+// ============================================================
+
+jQuery(async () => {
+    if (!extension_settings[EXT_NAME]) {
+        extension_settings[EXT_NAME] = structuredClone(DEFAULT_SETTINGS);
+    }
+    state.activeTab = getOpt('defaultTab') || 'character';
+
+    buildModal();
+    registerWandButton();
+    buildSettingsPanel();
+    console.log('[챗키피디아] 로드 완료 ✅');
+});
