@@ -548,43 +548,12 @@ function buildModal() {
 
 // ── 마법봉(wand) 메뉴 등록 ───────────────────────────────
 function registerWandButton() {
-    const WAND_ID = 'chatpedia-wand-btn';
-
-    const inject = () => {
-        if (document.getElementById(WAND_ID)) return true;
-
-        // SillyTavern의 extensions 메뉴 컨테이너 탐색
-        const menu = document.getElementById('extensionsMenu')
-            || document.querySelector('.extensions-menu ul')
-            || document.querySelector('#extensionsMenuList');
-        if (!menu) return false;
-
-        const item = document.createElement('div');
-        item.id = WAND_ID;
-        item.className = 'list-group-item flex-container flexGap5 interactable';
-        item.setAttribute('tabindex', '0');
-        item.innerHTML = `<i class="fa-solid fa-book-open"></i><span>챗키피디아 열기</span>`;
-        item.addEventListener('click', () => {
-            // 메뉴 팝업 닫기 시도
-            document.querySelector('#extensionsMenu')?.closest('.popup')?.remove();
-            document.querySelector('.extensions-menu')?.classList.remove('open');
-            openModal();
-        });
-        menu.appendChild(item);
-        return true;
-    };
-
-    if (!inject()) {
-        const obs = new MutationObserver(() => { if (inject()) obs.disconnect(); });
-        obs.observe(document.body, { childList: true, subtree: true });
-    }
-
-    // 마법봉 버튼 클릭 후 메뉴가 열릴 때 재시도
-    document.addEventListener('click', e => {
-        if (e.target.closest('#extensionsMenuButton, [data-i18n="Extensions"], .extensions-btn')) {
-            setTimeout(inject, 150);
-        }
-    });
+    // 레퍼런스와 동일한 방식
+    const $btn = $(`<div id="chatpedia-wand-btn" class="list-group-item flex-container flexGap5" title="챗키피디아 열기">
+        <span>📚</span><span>챗키피디아</span>
+    </div>`);
+    $btn.on('click', openModal);
+    $('#extensionsMenu').append($btn);
 }
 
 // ── 플로팅 버튼 (모바일 보조) ─────────────────────────────
@@ -699,33 +668,27 @@ function highlightLinkedEntry() {
 // ============================================================
 
 function buildSettingsPanel() {
-    const panelId = 'chatpedia-settings-panel';
-    if (document.getElementById(panelId)) return;
+    if (document.getElementById('chatpedia-settings-panel')) return;
 
-    // ST Extensions 탭에서 챗키피디아 항목 찾기
-    const tryInjectPanel = () => {
-        // ST는 보통 #extensions_settings 또는 data-extension-name 으로 패널을 식별
-        const containers = [
-            document.querySelector(`[data-extension-name="${EXT_NAME}"] .inline-drawer-content`),
-            document.querySelector(`#${EXT_NAME}_settings`),
-            document.querySelector(`.extension_block[data-name="${EXT_NAME}"] .inline-drawer-content`),
-        ];
-        const container = containers.find(Boolean);
-        if (!container) return false;
-        if (container.querySelector(`#${panelId}`)) return true;
+    // 레퍼런스와 동일한 방식: #extensions_settings에 직접 append
+    const html = `
+        <div id="chatpedia_ext_container">
+            <div class="inline-drawer">
+                <div class="inline-drawer-toggle inline-drawer-header">
+                    <b>📚 챗키피디아</b>
+                    <div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div>
+                </div>
+                <div class="inline-drawer-content">
+                    <div id="chatpedia-settings-panel">
+                        ${buildSettingsPanelHTML()}
+                    </div>
+                </div>
+            </div>
+        </div>`;
 
-        const panel = document.createElement('div');
-        panel.id = panelId;
-        panel.innerHTML = buildSettingsPanelHTML();
-        container.appendChild(panel);
-        bindSettingsPanelEvents(panel);
-        return true;
-    };
-
-    if (!tryInjectPanel()) {
-        const obs = new MutationObserver(() => { if (tryInjectPanel()) obs.disconnect(); });
-        obs.observe(document.body, { childList: true, subtree: true });
-    }
+    $('#extensions_settings').append(html);
+    const panel = document.getElementById('chatpedia-settings-panel');
+    if (panel) bindSettingsPanelEvents(panel);
 }
 
 function buildSettingsPanelHTML() {
